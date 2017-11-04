@@ -1,0 +1,25 @@
+*~
+.#*
+## the next line needs to start with a backslash to avoid looking like
+## a comment
+\#*#
+*.pyc
+*.pyo
+.*.swp
+
+.idea/
+
+__pycache_
+/parts
+/.installed.cfg
+/develop-eggs
+/*.eg
+*.egg-info
+/eggs
+/.eggs
+/build
+/dist
+/venv
+/venv3
+virtualenv
+onelogin.sdk.json
