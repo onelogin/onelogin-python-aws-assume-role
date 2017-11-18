@@ -115,7 +115,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
             if mfa_verify_info is None:
                 print("-----------------------------------------------------------------------")
                 for index, device in enumerate(devices):
-                    print(" " + index + " | " + device.type)
+                    print(" " + str(index) + " | " + device.type)
 
                 print("-----------------------------------------------------------------------")
                 print("\nSelect the desired MFA Device [0-%s]: " % (len(devices) - 1))
