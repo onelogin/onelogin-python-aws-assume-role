@@ -10,6 +10,7 @@ from optparse import OptionParser
 
 import boto3
 import botocore
+import ipgetter
 from lxml import etree as ET
 from onelogin.api.client import OneLoginClient
 from optparse_mooi import CompactColorHelpFormatter
@@ -95,13 +96,13 @@ def check_device_exists(devices, device_id):
     return False
 
 
-def get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, mfa_verify_info=None):
-    saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain)
+def get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, mfa_verify_info=None, ip_address=None):
+    saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain, ip_address)
 
     try_get_saml_response = 0
     while saml_endpoint_response is None or saml_endpoint_response.type == "pending":
         time.sleep(30)
-        saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain)
+        saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain, ip_address)
         try_get_saml_response += 1
         if try_get_saml_response == 10:
             sys.exit()
@@ -147,11 +148,11 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                 otp_token = mfa_verify_info['otp_token']
                 state_token = mfa_verify_info['state_token']
 
-            saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, otp_token)
+            saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, otp_token, ip_address)
             while client.error_description == "Failed authentication with this factor":
                 print("The OTP Token was invalid, please introduce a new one: ")
                 otp_token = sys.stdin.readline().strip()
-                saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, otp_token)
+                saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, otp_token, ip_address)
                 mfa_verify_info['otp_token'] = otp_token
 
         saml_response = saml_endpoint_response.saml_response
@@ -222,7 +223,9 @@ def main():
         else:
             time.sleep(options.time * 60)
 
-        result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, mfa_verify_info)
+        ip_address = ipgetter.myip()
+
+        result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, mfa_verify_info, ip_address)
 
         mfa_verify_info = result['mfa_verify_info']
         saml_response = result['saml_response']

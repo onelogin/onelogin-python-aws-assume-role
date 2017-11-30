@@ -36,7 +36,8 @@ setup(
     install_requires=[
         'boto3==1.4.7',
         'onelogin==1.1.0',
-        'optparse-pretty==0.1.1'
+        'optparse-pretty==0.1.1',
+        'ipgetter==0.6'
     ],
     test_suite='tests',
     extras_require={
