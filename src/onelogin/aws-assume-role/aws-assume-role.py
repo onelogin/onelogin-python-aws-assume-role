@@ -192,7 +192,7 @@ def main():
 
     mfa_verify_info = None
     role_arn = principal_arn = None
-    default_aws_region = 'us-east-1'
+    default_aws_region = 'us-west-2'
 
     config_file_writer = None
     botocore_config = botocore.client.Config(signature_version=botocore.UNSIGNED)
