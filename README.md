@@ -71,6 +71,9 @@ Where:
 - Provide the OneLogin's App ID to identify the AWS app
 - Provide the domain of your OneLogin's instance.
 
+_Note: If you're bored typing your username, App ID, subdomain or AWS region every time,
+you can specify these parameters as command-line arguments instead._
+
 With that data, a SAMLResponse is retrieved. And possible AWS Role are retrieved.
 
 #### Step 2. Select AWS Role to be assumed.
