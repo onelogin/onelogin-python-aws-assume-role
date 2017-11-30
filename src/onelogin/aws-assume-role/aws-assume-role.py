@@ -13,6 +13,7 @@ import botocore
 from lxml import etree as ET
 from onelogin.api.client import OneLoginClient
 from optparse_mooi import CompactColorHelpFormatter
+
 from writer import ConfigFileWriter
 
 
@@ -124,8 +125,9 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                     print(" " + str(index) + " | " + device.type)
 
                 print("-----------------------------------------------------------------------")
-                print("\nSelect the desired MFA Device [0-%s]: " % (len(devices) - 1))
+
                 if len(devices) > 1:
+                    print("\nSelect the desired MFA Device [0-%s]: " % (len(devices) - 1))
                     device_selection = int(sys.stdin.readline().strip())
                 else:
                     device_selection = 0
