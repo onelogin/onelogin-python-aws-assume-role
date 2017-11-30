@@ -52,6 +52,8 @@ def get_options():
                       help="OneLogin app id")
     parser.add_option("-d", "--onelogin-subdomain", dest="subdomain", type="string",
                       help="OneLogin subdomain")
+    parser.add_option("--aws-region", dest="aws_region", type="string",
+                      help="AWS region to use")
 
     (options, args) = parser.parse_args()
 
@@ -255,8 +257,11 @@ def main():
 
         if i == 0:
             # AWS Region
-            print("\nAWS Region (" + default_aws_region + "): ")
-            aws_region = sys.stdin.readline().strip()
+            if options.aws_region:
+                aws_region = options.aws_region
+            else:
+                print("\nAWS Region (" + default_aws_region + "): ")
+                aws_region = sys.stdin.readline().strip()
             if not aws_region or aws_region == "-":
                 aws_region = default_aws_region
 
