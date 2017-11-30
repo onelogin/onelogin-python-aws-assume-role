@@ -97,6 +97,7 @@ def check_device_exists(devices, device_id):
 
 
 def get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, mfa_verify_info=None, ip_address=None):
+    client.get_access_token()
     saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain, ip_address)
 
     try_get_saml_response = 0
@@ -188,8 +189,6 @@ def main():
     options = get_options()
 
     client = get_client(options)
-
-    client.get_access_token()
 
     mfa_verify_info = None
     role_arn = principal_arn = None
