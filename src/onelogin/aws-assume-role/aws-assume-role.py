@@ -1,19 +1,18 @@
 #!/usr/bin/python
 
 import base64
-import boto3
-import botocore
 import getpass
 import json
 import os
 import sys
 import time
-
-from lxml import etree as ET
 from optparse import OptionParser
-from optparse_mooi import CompactColorHelpFormatter
 
+import boto3
+import botocore
+from lxml import etree as ET
 from onelogin.api.client import OneLoginClient
+from optparse_mooi import CompactColorHelpFormatter
 
 from writer import ConfigFileWriter
 
@@ -46,6 +45,16 @@ def get_options():
                       help="Save Temporal AWS credentials using that profile name")
     parser.add_option("-f", "--file", dest="file", type="string",
                       help="Set a custom path to save the AWS credentials. (if not used, default AWS path is used)")
+
+    parser.add_option("-u", "--onelogin-username", dest="username", type="string",
+                      help="OneLogin username (email address)")
+    parser.add_option("-a", "--onelogin-app-id", dest="app_id", type="string",
+                      help="OneLogin app id")
+    parser.add_option("-d", "--onelogin-subdomain", dest="subdomain", type="string",
+                      help="OneLogin subdomain")
+    parser.add_option("--aws-region", dest="aws_region", type="string",
+                      help="AWS region to use")
+
     (options, args) = parser.parse_args()
 
     options.time = options.time
@@ -118,8 +127,12 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                     print(" " + str(index) + " | " + device.type)
 
                 print("-----------------------------------------------------------------------")
-                print("\nSelect the desired MFA Device [0-%s]: " % (len(devices) - 1))
-                device_selection = int(sys.stdin.readline().strip())
+
+                if len(devices) > 1:
+                    print("\nSelect the desired MFA Device [0-%s]: " % (len(devices) - 1))
+                    device_selection = int(sys.stdin.readline().strip())
+                else:
+                    device_selection = 0
                 device = devices[device_selection]
                 device_id = device.id
 
@@ -187,16 +200,25 @@ def main():
     for i in range(0, options.loop):
         if i == 0:
             # Capture OneLogin Account Details
-            print("OneLogin Username: ")
-            username_or_email = sys.stdin.readline().strip()
+            if options.username:
+                username_or_email = options.username
+            else:
+                print("OneLogin Username: ")
+                username_or_email = sys.stdin.readline().strip()
 
             password = getpass.getpass("\nOneLogin Password: ")
 
-            print("\nAWS App ID: ")
-            app_id = sys.stdin.readline().strip()
+            if options.app_id:
+                app_id = options.app_id
+            else:
+                print("\nAWS App ID: ")
+                app_id = sys.stdin.readline().strip()
 
-            print("\nOnelogin Instance Sub Domain: ")
-            onelogin_subdomain = sys.stdin.readline().strip()
+            if options.subdomain:
+                onelogin_subdomain = options.subdomain
+            else:
+                print("\nOnelogin Instance Sub Domain: ")
+                onelogin_subdomain = sys.stdin.readline().strip()
         else:
             time.sleep(options.time * 60)
 
@@ -235,8 +257,11 @@ def main():
 
         if i == 0:
             # AWS Region
-            print("\nAWS Region (" + default_aws_region + "): ")
-            aws_region = sys.stdin.readline().strip()
+            if options.aws_region:
+                aws_region = options.aws_region
+            else:
+                print("\nAWS Region (" + default_aws_region + "): ")
+                aws_region = sys.stdin.readline().strip()
             if not aws_region or aws_region == "-":
                 aws_region = default_aws_region
 
@@ -292,6 +317,7 @@ def main():
             if options.loop > (i + 1):
                 print("This process will regenerate credentials %s more times.\n" % (options.loop - (i + 1)))
                 print("Press Ctrl + C to exit")
+
 
 if __name__ == '__main__':
     main()
