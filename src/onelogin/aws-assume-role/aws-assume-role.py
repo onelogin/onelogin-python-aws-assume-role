@@ -149,11 +149,11 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                 otp_token = mfa_verify_info['otp_token']
                 state_token = mfa_verify_info['state_token']
 
-            saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, otp_token, ip_address)
+            saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, otp_token)
             while client.error_description == "Failed authentication with this factor":
                 print("The OTP Token was invalid, please introduce a new one: ")
                 otp_token = sys.stdin.readline().strip()
-                saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, otp_token, ip_address)
+                saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, otp_token)
                 mfa_verify_info['otp_token'] = otp_token
 
         saml_response = saml_endpoint_response.saml_response
