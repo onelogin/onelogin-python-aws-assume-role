@@ -8,11 +8,11 @@ from setuptools import setup
 
 
 version = {}
-with open("src/onelogin/aws-assume-role/version.py") as fp:
+with open("src/onelogin/aws_assume_role/version.py") as fp:
     exec(fp.read(), version)
 
 setup(
-    name='onelogin-aws-assume-role',
+    name='onelogin-aws_assume_role',
     version=version['__version__'],
     description="Assume an AWS Role and get temporary credentials using OneLogin",
     classifiers=[
@@ -28,7 +28,7 @@ setup(
     license='MIT',
     url='https://github.com/onelogin/onelogin-python-aws-cli-assume-role',
     packages=[
-        'onelogin/aws-assume-role'
+        'onelogin/aws_assume_role'
     ],
     package_dir={
         '': 'src',
@@ -36,7 +36,8 @@ setup(
     install_requires=[
         'boto3==1.4.7',
         'onelogin==1.1.0',
-        'optparse-pretty==0.1.1'
+        'optparse-pretty==0.1.1',
+        'ipgetter==0.6'
     ],
     test_suite='tests',
     extras_require={
@@ -48,4 +49,5 @@ setup(
             'coveralls==0.4.4',
         ),
     },
-    keywords='onelogin aws-assume-role',)
+    keywords='onelogin aws_assume_role',
+    scripts=['bin/aws-assume-role'],)
