@@ -176,10 +176,14 @@ def get_attributes(saml_response):
         attr_name = attribute_node.get('Name')
         values = []
         for attr in attribute_node.iterchildren('{%s}AttributeValue' % NSMAP['saml']):
-            values.append(attr.text)
+            values.append(element_text(attr))
         attributes[attr_name] = values
     return attributes
 
+
+def element_text(node):
+    ET.strip_tags(node, ET.Comment)
+    return node.text
 
 def main():
     print("\nOneLogin AWS Assume Role Tool\n")
