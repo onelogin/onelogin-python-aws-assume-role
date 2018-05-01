@@ -19,6 +19,16 @@ The "[Configuring SAML for Amazon Web Services (AWS) with Multiple Accounts and 
  - Complete your AWS Multi Account configuration in OneLogin
 
 ## Installation
+
+### Docker installation method
+
+* git clone git@github.com:onelogin/onelogin-python-aws-assume-role.git
+* cd onelogin-python-aws-assume-role
+* Enter your credentials in the onelogin.sdk.json file as explained below
+* Save the onelogin.sdk.json file in the root directory of the repo
+* docker build . -t awsaccess:latest
+* docker run -it -v ~/.aws:/root/.aws awsaccess:latest python src/onelogin/aws-assume-role/aws-assume-role.py --onelogin-username {user_email} --onelogin-subdomain {subdomain} --onelogin-app-id {app_id} --aws-region {aws region} --profile default
+
 ### Hosting
 
 #### Github
