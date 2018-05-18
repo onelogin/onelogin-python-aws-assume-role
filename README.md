@@ -7,7 +7,7 @@ Users will be able to choose from among multiple AWS roles in multiple AWS accou
 
 This is really useful for customers that run complex environments with multiple AWS accounts, roles and many different people that need periodic access as it saves manually generating and managing AWS credentials.
 
-This repository contains a python script at [src/onelogin/aws-assume-role/aws-assume-role.py](https://github.com/onelogin/onelogin-python-aws-cli-assume-role/tree/master/src/onelogin/aws-assume-role/aws-assume-role.py) that you can execute in order to retrieve the AWS credentials.
+This repository contains a python script at [src/onelogin/aws-assume-role/aws-assume-role.py](https://github.com/onelogin/onelogin-python-aws-assume-role/blob/master/src/onelogin/aws-assume-role/aws-assume-role.py) that you can execute in order to retrieve the AWS credentials.
 
 ## AWS and OneLogin prerequisites
 
@@ -24,8 +24,8 @@ The "[Configuring SAML for Amazon Web Services (AWS) with Multiple Accounts and 
 #### Github
 
 The project is hosted at github. You can download it from:
-* Lastest release: https://github.com/onelogin/onelogin-python-aws-cli-assume-role/releases/latest
-* Master repo: https://github.com/onelogin/onelogin-python-aws-cli-assume-role/tree/master
+* Lastest release: https://github.com/onelogin/onelogin-python-aws-assume-role/releases/latest
+* Master repo: https://github.com/onelogin/onelogin-python-aws-assume-role/tree/master
 
 #### Pypi
 
