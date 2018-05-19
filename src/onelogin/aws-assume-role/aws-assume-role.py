@@ -85,7 +85,11 @@ def get_client(options):
     if client_id is None or client_secret is None:
         raise Exception("OneLogin Client ID and Secret are required")
 
-    return OneLoginClient(client_id, client_secret, region)
+    client = OneLoginClient(client_id, client_secret, region)
+    client.prepare_token()
+    if client.error == 401 or client.access_token is None:
+        raise Exception("Invalid client_id and client_secret. Access_token could not be retrieved")
+    return client
 
 
 def check_device_exists(devices, device_id):
@@ -100,13 +104,32 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
 
     try_get_saml_response = 0
     while saml_endpoint_response is None or saml_endpoint_response.type == "pending":
-        time.sleep(30)
+        if saml_endpoint_response is None:
+            if client.error in ['400', '401']:
+                error_msg = "\n\nError %s. %s" % (client.error, client.error_description)
+                if client.error_description == "Invalid subdomain":
+                    print(error_msg)
+                    print("\nOnelogin Instance Sub Domain: ")
+                    onelogin_subdomain = sys.stdin.readline().strip()
+                elif client.error_description in ["Authentication Failed: Invalid user credentials",
+                    "password is empty"]:
+                    print(error_msg)
+                    password = getpass.getpass("\nOneLogin Password: ")
+                elif client.error_description == "username is empty":
+                    print(error_msg)
+                    print("OneLogin Username: ")
+                    username_or_email = sys.stdin.readline().strip()
+                else:
+                    raise Exception(error_msg)
+
+        if saml_endpoint_response and saml_endpoint_response.type == "pending":
+            time.sleep(30)
         saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain)
         try_get_saml_response += 1
         if try_get_saml_response == 10:
             sys.exit()
 
-    if saml_endpoint_response.type == "success":
+    if saml_endpoint_response and saml_endpoint_response.type == "success":
         if saml_endpoint_response.mfa is not None:
             mfa = saml_endpoint_response.mfa
             devices = mfa.devices
@@ -158,7 +181,10 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
 
     result = {
         'saml_response': saml_response,
-        'mfa_verify_info': mfa_verify_info
+        'mfa_verify_info': mfa_verify_info,
+        'username_or_email': username_or_email,
+        'password': password,
+        'onelogin_subdomain': onelogin_subdomain,
     }
     return result
 
@@ -230,6 +256,9 @@ def main():
 
         mfa_verify_info = result['mfa_verify_info']
         saml_response = result['saml_response']
+        username_or_email = result['username_or_email']
+        password = result['password']
+        onelogin_subdomain = result['onelogin_subdomain']
 
         if i == 0:
             attributes = get_attributes(saml_response)
