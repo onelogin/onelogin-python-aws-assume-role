@@ -41,6 +41,26 @@ It works with python2 and python3.
 
 ## Getting started
 
+### Virtualenv
+
+The use of a virtualenv is highly recommended.
+
+Virtualenv helps isolating the python enviroment used to run the toolkit. You can find more details and an installation guide in the [official documentation](http://virtualenv.readthedocs.org/en/latest/).
+
+Once you have your virtualenv ready and loaded, then you can install the toolkit on it in development mode executing this:
+
+```
+python setup.py develop
+```
+
+Using this method of deployment the toolkit files will be linked instead of copied, so if you make changes on them you won't need to reinstall the toolkit.
+
+If you want install it in a normal mode, execute:
+
+```
+python setup.py install
+```
+
 ### Settings
 
 The python script uses a settings file, where [OneLogin SDK properties](https://github.com/onelogin/onelogin-python-sdk#getting-started) are placed.
@@ -136,7 +156,9 @@ Or alternately save them to your AWS credentials file to enable faster access fr
 > python src/onelogin/aws-assume-role/aws-assume-role.py --profile profilename
 ```
 
-The credentials only last for 1 hour so you can also make it regenerate and update the credentials file by using the `--loop` option to specify the number of iterations, and --time to specify the minutes between iterations.
+By default, the credentials only last for 1 hour, but you can [edit that restriction on AWS and set a max of 12h session duration](https://aws.amazon.com/es/blogs/security/enable-federated-api-access-to-your-aws-resources-for-up-to-12-hours-using-iam-roles/).
+
+You can also make it regenerate and update the credentials file by using the `--loop` option to specify the number of iterations, and --time to specify the minutes between iterations.
 
 For more info execute:
 
