@@ -34,8 +34,8 @@ setup(
         '': 'src',
     },
     install_requires=[
-        'boto3==1.4.7',
-        'onelogin==1.1.0',
+        'boto3==1.7.33',
+        'onelogin==1.3.2',
         'optparse-pretty==0.1.1'
     ],
     test_suite='tests',
