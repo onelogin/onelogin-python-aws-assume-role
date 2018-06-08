@@ -288,7 +288,7 @@ def main():
                 elif len(roles) == 1:
                     selected_role = roles[0]
                 else:
-                    print("SAMLResponse from Identity Provider does not contain available AWS Role for this user")
+                    raise Exception("SAMLResponse from Identity Provider does not contain available AWS Role for this user")
 
                 if selected_role is not None:
                     selected_role_data = selected_role.split(',')
