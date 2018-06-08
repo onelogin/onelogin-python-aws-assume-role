@@ -52,6 +52,8 @@ def get_options():
                       help="OneLogin app id")
     parser.add_option("-d", "--onelogin-subdomain", dest="subdomain", type="string",
                       help="OneLogin subdomain")
+    parser.add_option("-x", "--ip", dest="ip", type="string",
+                      help="Set the IP Address to bypass MFA if the IP was whitelisted")
     parser.add_option("--aws-region", dest="aws_region", type="string",
                       help="AWS region to use")
 
@@ -95,13 +97,13 @@ def check_device_exists(devices, device_id):
     return False
 
 
-def get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, mfa_verify_info=None):
-    saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain)
+def get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip=None, mfa_verify_info=None):
+    saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain, ip)
 
     try_get_saml_response = 0
     while saml_endpoint_response is None or saml_endpoint_response.type == "pending":
         time.sleep(30)
-        saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain)
+        saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain, ip)
         try_get_saml_response += 1
         if try_get_saml_response == 10:
             sys.exit()
@@ -200,7 +202,6 @@ def main():
 
     config_file_writer = None
     botocore_config = botocore.client.Config(signature_version=botocore.UNSIGNED)
-
     for i in range(0, options.loop):
         if i == 0:
             # Capture OneLogin Account Details
@@ -223,10 +224,16 @@ def main():
             else:
                 print("\nOnelogin Instance Sub Domain: ")
                 onelogin_subdomain = sys.stdin.readline().strip()
+
+            if options.ip:
+                ip = options.ip
+            else:
+                print("\nIP Address: ")
+                ip = sys.stdin.readline().strip()
         else:
             time.sleep(options.time * 60)
 
-        result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, mfa_verify_info)
+        result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info)
 
         mfa_verify_info = result['mfa_verify_info']
         saml_response = result['saml_response']
