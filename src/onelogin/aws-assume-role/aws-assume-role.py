@@ -126,7 +126,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
 
         if saml_endpoint_response and saml_endpoint_response.type == "pending":
             time.sleep(30)
-        saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain ip)
+        saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain, ip)
         try_get_saml_response += 1
         if try_get_saml_response == 10:
             sys.exit()
