@@ -52,8 +52,6 @@ def get_options():
                       help="OneLogin app id")
     parser.add_option("-d", "--onelogin-subdomain", dest="subdomain", type="string",
                       help="OneLogin subdomain")
-    parser.add_option("-x", "--ip", dest="ip", type="string",
-                      help="Set the IP Address to bypass MFA if the IP was whitelisted")
     parser.add_option("--aws-region", dest="aws_region", type="string",
                       help="AWS region to use")
 
@@ -83,11 +81,14 @@ def get_client(options):
                 client_id = data['client_id']
                 client_secret = data['client_secret']
                 region = data.get('region', 'us')
+                ip = data.get('ip', None)
 
     if client_id is None or client_secret is None:
         raise Exception("OneLogin Client ID and Secret are required")
 
     client = OneLoginClient(client_id, client_secret, region)
+    if ip:
+        client.ip = ip
     client.prepare_token()
     if client.error == 401 or client.access_token is None:
         raise Exception("Invalid client_id and client_secret. Access_token could not be retrieved")
@@ -225,6 +226,10 @@ def main():
     mfa_verify_info = None
     role_arn = principal_arn = None
     default_aws_region = 'us-west-2'
+    ip = None
+
+    if hasattr(client, 'ip'):
+        ip = client.ip
 
     config_file_writer = None
     botocore_config = botocore.client.Config(signature_version=botocore.UNSIGNED)
@@ -250,12 +255,6 @@ def main():
             else:
                 print("\nOnelogin Instance Sub Domain: ")
                 onelogin_subdomain = sys.stdin.readline().strip()
-
-            if options.ip:
-                ip = options.ip
-            else:
-                print("\nIP Address: ")
-                ip = sys.stdin.readline().strip()
         else:
             time.sleep(options.time * 60)
 

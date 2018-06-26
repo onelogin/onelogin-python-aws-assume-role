@@ -71,7 +71,8 @@ Is a json file named onelogin.sdk.json as follows
 {
 	"client_id": "",
 	"client_secret": "",
-	"region": ""
+	"region": "",
+	"ip": ""
 }
 ```
 
@@ -80,8 +81,13 @@ Where:
  * client_id  Onelogin OAuth2 client ID
  * client_secret  Onelogin OAuth2 client secret
  * region  Indicates where the instance is hosted. Possible values: 'us' or 'eu'.
+ * ip  Indicates the IP to be used on the method to retrieve the SAMLResponse in order to bypass MFA if that IP was previously whitelisted.
 
- Place that file in the same path where the python script is invoked.
+For security reasons, IP only can be provided at the onelogin.sdk.json.
+On a shared machines where multiple users has access, That file should only be readable by the root of the machine that also controls the
+client_id / client_secret, and not by an end user, to prevent him manipulate the IP value.
+
+Place that file in the same path where the python script is invoked.
 
 ### Docker installation method
 
