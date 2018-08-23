@@ -45,6 +45,9 @@ def get_options():
                       help="Save Temporal AWS credentials using that profile name")
     parser.add_option("-f", "--file", dest="file", type="string",
                       help="Set a custom path to save the AWS credentials. (if not used, default AWS path is used)")
+    parser.add_option("-o", "--duration", dest="duration", type="int", default=60,
+                      help="Temporal credentials session duration, in minutes. Note that specifying a value larger "
+                           "than the maximum allowed CLI/API session duration for the AWS role will fail.")
 
     parser.add_option("-u", "--onelogin-username", dest="username", type="string",
                       help="OneLogin username (email address)")
@@ -309,7 +312,7 @@ def main():
             RoleArn=role_arn,
             PrincipalArn=principal_arn,
             SAMLAssertion=saml_response,
-            DurationSeconds=3600
+            DurationSeconds=options.duration * 60
         )
 
         access_key_id = aws_session_token['Credentials']['AccessKeyId']
