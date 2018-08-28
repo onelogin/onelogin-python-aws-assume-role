@@ -11,7 +11,7 @@ This repository contains a python script at [src/onelogin/aws-assume-role/aws-as
 
 ## AWS and OneLogin prerequisites
 
-The "[Configuring SAML for Amazon Web Services (AWS) with Multiple Accounts and Roles](https://support.onelogin.com/hc/en-us/articles/212802926-Configuring-SAML-for-Amazon-Web-Services-AWS-with-Multiple-Accounts-and-Roles)" guide explains how to:
+The "[Configuring SAML for Amazon Web Services (AWS) with Multiple Accounts and Roles](https://onelogin.service-now.com/support?id=kb_article&sys_id=66a91d03db109700d5505eea4b9619a5)" guide explains how to:
  - Add the AWS Multi Account app to OneLogin
  - Configure OneLogin as an Identity Provider for each AWS account
  - Add or update AWS Roles to use OneLogin as the SAML provider
