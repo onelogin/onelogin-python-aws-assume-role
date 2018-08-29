@@ -173,6 +173,11 @@ Or alternately save them to your AWS credentials file to enable faster access fr
 
 By default, the credentials only last for 1 hour, but you can [edit that restriction on AWS and set a max of 12h session duration](https://aws.amazon.com/es/blogs/security/enable-federated-api-access-to-your-aws-resources-for-up-to-12-hours-using-iam-roles/).
 
+After enabling access for more than one hour, you can specify the session duration in minutes using the ``--duration`` parameter:
+```sh
+> python src/onelogin/aws-assume-role/aws-assume-role.py --duration 160
+```
+
 You can also make it regenerate and update the credentials file by using the `--loop` option to specify the number of iterations, and --time to specify the minutes between iterations.
 
 For more info execute:
