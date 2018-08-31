@@ -174,6 +174,8 @@ By default, the credentials only last for 1 hour, but you can [edit that restric
 
 You can also make it regenerate and update the credentials file by using the `--loop` option to specify the number of iterations, and --time to specify the minutes between iterations.
 
+You can also make it interactive, with the `-x` or `--interactive`option, and at the end of the iteration, you will be asked if want to generate new credentials for a new user or a new role
+
 For more info execute:
 
 ```sh
