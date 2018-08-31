@@ -10,12 +10,17 @@ from optparse import OptionParser
 
 import boto3
 import botocore
+from botocore.exceptions import ClientError
 from lxml import etree as ET
 from onelogin.api.client import OneLoginClient
 from optparse_mooi import CompactColorHelpFormatter
 
 from writer import ConfigFileWriter
 
+
+MFA_ATTEMPS_FOR_WARNING = 3
+TIME_SLEEP_ON_RESPONSE_PENDING = 30
+MAX_ITER_GET_SAML_RESPONSE = 10
 
 def get_options():
     help_formatter = CompactColorHelpFormatter(
@@ -35,7 +40,7 @@ def get_options():
     parser.add_option("-s", "--client_secret", dest="client_secret", type="string",
                       help="A valid OneLogin API client_secret")
     parser.add_option("-r", "--region", dest="region", default="us", type="string",
-                      help="us or eu  (Default value: us")
+                      help="Onelogin region. us or eu  (Default value: us)")
 
     parser.add_option("-t", "--time", dest="time", default=45, type="int",
                       help="Sleep time between iterations, in minutes  [15-60 min]")
@@ -126,10 +131,11 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                     raise Exception(error_msg)
 
         if saml_endpoint_response and saml_endpoint_response.type == "pending":
-            time.sleep(30)
+            time.sleep(TIME_SLEEP_ON_RESPONSE_PENDING)
         saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain, ip)
         try_get_saml_response += 1
-        if try_get_saml_response == 10:
+        if try_get_saml_response == MAX_ITER_GET_SAML_RESPONSE:
+            print("Not able to get a SAMLResponse with success status after %s iteration(s)." % MAX_ITER_GET_SAML_RESPONSE)
             sys.exit()
 
     if saml_endpoint_response and saml_endpoint_response.type == "success":
@@ -167,18 +173,36 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                 state_token = mfa.state_token
                 mfa_verify_info = {
                     'otp_token': otp_token,
-                    'state_token': state_token
+                    'state_token': state_token,
+                    'device_id': device_id
                 }
             else:
                 otp_token = mfa_verify_info['otp_token']
                 state_token = mfa_verify_info['state_token']
 
             saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, otp_token)
+            mfa_error = 0
             while client.error_description == "Failed authentication with this factor":
-                print("The OTP Token was invalid, please introduce a new one: ")
+                if mfa_error > MFA_ATTEMPS_FOR_WARNING and len(devices) > 1:
+                    print("The OTP Token was invalid again, Do you want to select a new MFA method? (y/n)")
+                    answer = get_yes_or_not()
+                    if answer == 'y':
+                        # Let's regenerate the SAMLResponse and initialize again the count
+                        print("\n");
+                        return get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, None)
+                    else:
+                        print("Ok, Try introduce a new OTP Token then: ")
+                else:
+                    print("The OTP Token was invalid or expired, please introduce a new one: ")
+
                 otp_token = sys.stdin.readline().strip()
                 saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, otp_token)
                 mfa_verify_info['otp_token'] = otp_token
+                mfa_error = mfa_error + 1
+
+            if saml_endpoint_response is None:
+                print("There was an issue with the MFA validation, restarting the process")
+                return get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info)
 
         saml_response = saml_endpoint_response.saml_response
 
@@ -214,6 +238,12 @@ def element_text(node):
     ET.strip_tags(node, ET.Comment)
     return node.text
 
+def get_yes_or_not():
+    answer = None
+    while (answer != 'y' and answer != 'n'):
+        answer = sys.stdin.readline().strip().lower()
+    return answer
+
 def main():
     print("\nOneLogin AWS Assume Role Tool\n")
 
@@ -233,30 +263,44 @@ def main():
 
     config_file_writer = None
     botocore_config = botocore.client.Config(signature_version=botocore.UNSIGNED)
-    for i in range(0, options.loop):
-        if i == 0:
-            # Capture OneLogin Account Details
-            if options.username:
-                username_or_email = options.username
-            else:
-                print("OneLogin Username: ")
-                username_or_email = sys.stdin.readline().strip()
+    loops = options.loop
+    exception = False
+    ask_for_user_again = False
+    ask_for_role_again = False
+    i = 0;
+    while (i < loops):
+        if ask_for_user_again:
+            print("OneLogin Username: ")
+            username_or_email = sys.stdin.readline().strip()
 
             password = getpass.getpass("\nOneLogin Password: ")
-
-            if options.app_id:
-                app_id = options.app_id
-            else:
-                print("\nAWS App ID: ")
-                app_id = sys.stdin.readline().strip()
-
-            if options.subdomain:
-                onelogin_subdomain = options.subdomain
-            else:
-                print("\nOnelogin Instance Sub Domain: ")
-                onelogin_subdomain = sys.stdin.readline().strip()
+            ask_for_role_again = True
         else:
-            time.sleep(options.time * 60)
+            if i == 0:
+                # Capture OneLogin Account Details
+                if options.username:
+                    username_or_email = options.username
+                else:
+                    print("OneLogin Username: ")
+                    username_or_email = sys.stdin.readline().strip()
+
+                password = getpass.getpass("\nOneLogin Password: ")
+
+                if options.app_id:
+                    app_id = options.app_id
+                else:
+                    print("\nAWS App ID: ")
+                    app_id = sys.stdin.readline().strip()
+
+                if options.subdomain:
+                    onelogin_subdomain = options.subdomain
+                else:
+                    print("\nOnelogin Instance Sub Domain: ")
+                    onelogin_subdomain = sys.stdin.readline().strip()
+            elif exception:
+                exception = False
+            else:
+                time.sleep(options.time * 60)
 
         result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info)
 
@@ -266,10 +310,20 @@ def main():
         password = result['password']
         onelogin_subdomain = result['onelogin_subdomain']
 
-        if i == 0:
+        if i == 0 or ask_for_role_again:
             attributes = get_attributes(saml_response)
             if 'https://aws.amazon.com/SAML/Attributes/Role' not in attributes.keys():
-                raise Exception("SAMLResponse from Identity Provider does not contain AWS Role info")
+                print("SAMLResponse from Identity Provider does not contain AWS Role info")
+
+                print("Do you want to select a new user?  (y/n)")
+                answer = get_yes_or_not()
+                if answer == 'y':
+                    ask_for_user_again = True
+                    i = i + 1
+                    loops = loops + 1
+                    continue
+                else:
+                    sys.exit()
             else:
                 roles = attributes['https://aws.amazon.com/SAML/Attributes/Role']
                 selected_role = None
@@ -287,7 +341,17 @@ def main():
                 elif len(roles) == 1:
                     selected_role = roles[0]
                 else:
-                    raise Exception("SAMLResponse from Identity Provider does not contain available AWS Role for this user")
+                    print("SAMLResponse from Identity Provider does not contain available AWS Role for this user")
+
+                    print("Do you want to select a new user?  (y/n)")
+                    answer = get_yes_or_not()
+                    if answer == 'y':
+                        ask_for_user_again = True
+                        i = i + 1
+                        loops = loops + 1
+                        continue
+                    else:
+                        sys.exit()
 
                 if selected_role is not None:
                     selected_role_data = selected_role.split(',')
@@ -305,12 +369,26 @@ def main():
                 aws_region = default_aws_region
 
         conn = boto3.client('sts', region_name=aws_region, config=botocore_config)
-        aws_session_token = conn.assume_role_with_saml(
-            RoleArn=role_arn,
-            PrincipalArn=principal_arn,
-            SAMLAssertion=saml_response,
-            DurationSeconds=3600
-        )
+        try:
+            aws_session_token = conn.assume_role_with_saml(
+                RoleArn=role_arn,
+                PrincipalArn=principal_arn,
+                SAMLAssertion=saml_response,
+                DurationSeconds=3600
+            )
+        except ClientError as err:
+            if 'Token must be redeemed within 5 minutes of issuance' in err.message:
+                print err.message
+                print "Generating a new SAMLResponse with the data already provided...."
+                exception = True
+                i = i + 1
+                loops = loops +1
+                continue
+            else:
+                raise err
+
+        i = i + 1
+        ask_for_user_again = ask_for_role_again = False
 
         access_key_id = aws_session_token['Credentials']['AccessKeyId']
         secret_access_key = aws_session_token['Credentials']['SecretAccessKey']
@@ -353,8 +431,8 @@ def main():
             print("Success!\n")
             print("Temporary AWS Credentials Granted via OneLogin\n")
             print("Updated AWS profile '%s' located at %s" % (options.profile_name, options.file))
-            if options.loop > (i + 1):
-                print("This process will regenerate credentials %s more times.\n" % (options.loop - (i + 1)))
+            if loops > (i + 1):
+                print("This process will regenerate credentials %s more times.\n" % (loops - (i + 1)))
                 print("Press Ctrl + C to exit")
 
 
