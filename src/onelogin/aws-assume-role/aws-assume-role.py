@@ -6,14 +6,13 @@ import json
 import os
 import sys
 import time
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 import boto3
 import botocore
 from botocore.exceptions import ClientError
 from lxml import etree as ET
 from onelogin.api.client import OneLoginClient
-from optparse_mooi import CompactColorHelpFormatter
 
 from writer import ConfigFileWriter
 
@@ -23,44 +22,34 @@ TIME_SLEEP_ON_RESPONSE_PENDING = 30
 MAX_ITER_GET_SAML_RESPONSE = 10
 
 def get_options():
-    help_formatter = CompactColorHelpFormatter(
-        heading_color='white-bold',
-        usage_color='yellow',
-        shopt_color='yellow-bold',
-        lopt_color='yellow-bold',
-        metavar_color='white-bold',
-        help_color='yellow',
-        description_color='white',
-        align_long_opts=True
-    )
-    parser = OptionParser(formatter=help_formatter)
+    parser = ArgumentParser()
 
-    parser.add_option("-i", "--client_id", dest="client_id", type="string",
+    parser.add_argument("-i", "--client_id", dest="client_id",
                       help="A valid OneLogin API client_id")
-    parser.add_option("-s", "--client_secret", dest="client_secret", type="string",
+    parser.add_argument("-s", "--client_secret", dest="client_secret",
                       help="A valid OneLogin API client_secret")
-    parser.add_option("-r", "--region", dest="region", default="us", type="string",
+    parser.add_argument("-r", "--region", dest="region", default="us",
                       help="Onelogin region. us or eu  (Default value: us)")
 
-    parser.add_option("-t", "--time", dest="time", default=45, type="int",
+    parser.add_argument("-t", "--time", dest="time", default=45, type=int,
                       help="Sleep time between iterations, in minutes  [15-60 min]")
-    parser.add_option("-l", "--loop", dest="loop", default=1, type="int",
+    parser.add_argument("-l", "--loop", dest="loop", default=1, type=int,
                       help="Number of iterations")
-    parser.add_option("-p", "--profile", dest="profile_name", type="string",
+    parser.add_argument("-p", "--profile", dest="profile_name",
                       help="Save Temporal AWS credentials using that profile name")
-    parser.add_option("-f", "--file", dest="file", type="string",
+    parser.add_argument("-f", "--file", dest="file", 
                       help="Set a custom path to save the AWS credentials. (if not used, default AWS path is used)")
 
-    parser.add_option("-u", "--onelogin-username", dest="username", type="string",
+    parser.add_argument("-u", "--onelogin-username", dest="username",
                       help="OneLogin username (email address)")
-    parser.add_option("-a", "--onelogin-app-id", dest="app_id", type="string",
+    parser.add_argument("-a", "--onelogin-app-id", dest="app_id",
                       help="OneLogin app id")
-    parser.add_option("-d", "--onelogin-subdomain", dest="subdomain", type="string",
+    parser.add_argument("-d", "--onelogin-subdomain", dest="subdomain",
                       help="OneLogin subdomain")
-    parser.add_option("--aws-region", dest="aws_region", type="string",
+    parser.add_argument("--aws-region", dest="aws_region",
                       help="AWS region to use")
 
-    (options, args) = parser.parse_args()
+    options = parser.parse_args()
 
     options.time = options.time
     if options.time < 15:
@@ -434,6 +423,7 @@ def main():
             if loops > (i + 1):
                 print("This process will regenerate credentials %s more times.\n" % (loops - (i + 1)))
                 print("Press Ctrl + C to exit")
+
 
 
 if __name__ == '__main__':

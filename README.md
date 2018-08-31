@@ -38,7 +38,6 @@ It works with python2 and python3.
 
 * boto3  AWS Python SDK
 * onelogin  OneLogin Python SDK
-* optparse-pretty  Pretty print the python script helper
 
 ## Getting started
 

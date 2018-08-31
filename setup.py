@@ -35,8 +35,7 @@ setup(
     },
     install_requires=[
         'boto3==1.7.84',
-        'onelogin==1.5.0',
-        'optparse-pretty==0.1.1'
+        'onelogin==1.5.0'
     ],
     test_suite='tests',
     extras_require={
