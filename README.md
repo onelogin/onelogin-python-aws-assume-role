@@ -172,6 +172,8 @@ Or alternately save them to your AWS credentials file to enable faster access fr
 
 By default, the credentials only last for 1 hour, but you can [edit that restriction on AWS and set a max of 12h session duration](https://aws.amazon.com/es/blogs/security/enable-federated-api-access-to-your-aws-resources-for-up-to-12-hours-using-iam-roles/).
 
+Then set the `-z` or `duration` with the desired credentials session duration. The possible value to be used is limited by the AWS Role. Rea more at https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use.html#id_roles_use_view-role-max-session
+
 You can also make it regenerate and update the credentials file by using the `--loop` option to specify the number of iterations, and --time to specify the minutes between iterations.
 
 You can also make it interactive, with the `-x` or `--interactive`option, and at the end of the iteration, you will be asked if want to generate new credentials for a new user or a new role

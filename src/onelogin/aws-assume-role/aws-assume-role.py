@@ -35,7 +35,6 @@ def get_options():
                         dest="region",
                         default="us",
                         help="Onelogin region. us or eu  (Default value: us)")
-
     parser.add_argument("-t", "--time",
                         dest="time",
                         default=45,
@@ -61,6 +60,11 @@ def get_options():
     parser.add_argument("-d", "--onelogin-subdomain",
                         dest="subdomain",
                         help="OneLogin subdomain")
+    parser.add_argument("-z", "--duration",
+                        dest="duration",
+                        default=3600,
+                        type=int,
+                        help="Desired AWS Credential Duration")
     parser.add_argument("-x", "--interactive",
                         dest="interactive",
                         default=False,
@@ -415,7 +419,7 @@ def main():
                 RoleArn=role_arn,
                 PrincipalArn=principal_arn,
                 SAMLAssertion=saml_response,
-                DurationSeconds=3600
+                DurationSeconds=options.duration
             )
         except ClientError as err:
             if 'Token must be redeemed within 5 minutes of issuance' in err.message:
