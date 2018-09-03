@@ -82,6 +82,11 @@ def get_options():
     elif options.time > 60:
         options.time = 60
 
+    if options.duration < 3600:
+        options.duration = 3600
+    elif options.duration > 43200:
+        options.duration = 43200
+
     return options
 
 
@@ -287,6 +292,17 @@ def get_selection(max):
     return answer
 
 
+def get_duration():
+    answer = None
+    while (answer is None or type(answer) != int or answer not in range(3600, 43200)):
+        answer = sys.stdin.readline().strip()
+        try:
+            answer = int(answer)
+        except:
+            pass
+    return answer
+
+
 def main():
     print("\nOneLogin AWS Assume Role Tool\n")
 
@@ -310,10 +326,10 @@ def main():
     ask_for_role_again = False
     sleep = False
     iterations = range(0, options.loop)
+    duration = options.duration
     for i in iterations:
         if sleep:
-            #time.sleep(options.time * 60)
-            time.sleep(10)
+            time.sleep(options.time * 60)
             sleep = False
 
         if ask_for_user_again:
@@ -354,6 +370,9 @@ def main():
         onelogin_subdomain = result['onelogin_subdomain']
 
         if i == 0 or ask_for_role_again:
+            if ask_for_role_again:
+                duration = options.duration
+
             attributes = get_attributes(saml_response)
             if 'https://aws.amazon.com/SAML/Attributes/Role' not in attributes.keys():
                 print("SAMLResponse from Identity Provider does not contain AWS Role info")
@@ -419,12 +438,18 @@ def main():
                 RoleArn=role_arn,
                 PrincipalArn=principal_arn,
                 SAMLAssertion=saml_response,
-                DurationSeconds=options.duration
+                DurationSeconds=duration
             )
         except ClientError as err:
             if 'Token must be redeemed within 5 minutes of issuance' in err.message:
                 print err.message
                 print "Generating a new SAMLResponse with the data already provided...."
+                iterations.append(iterations[-1]+1)
+                continue
+            elif "The requested DurationSeconds exceeds the MaxSessionDuration set for this role." in err.message:
+                print err.message
+                print "Introduce a new value, to be used on this Role, for DurationSeconds between 3600 and 43200. Previously was %s" % duration
+                duration = get_duration()
                 iterations.append(iterations[-1]+1)
                 continue
             else:
