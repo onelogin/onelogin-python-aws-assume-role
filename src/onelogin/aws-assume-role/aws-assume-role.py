@@ -475,7 +475,8 @@ def main():
                 DurationSeconds=duration
             )
         except ClientError as err:
-            if 'Token must be redeemed within 5 minutes of issuance' in err.message:
+            if 'Token must be redeemed within 5 minutes of issuance' in err.message or \
+               'An error occurred (ExpiredTokenException) when calling the AssumeRoleWithSAML operation' in err.message: 
                 print err.message
                 print "Generating a new SAMLResponse with the data already provided...."
                 iterations.append(iterations[-1]+1)
