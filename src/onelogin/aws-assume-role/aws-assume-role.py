@@ -212,12 +212,12 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                 if device_type == "OneLogin SMS":
                     # Trigger SMS
                     saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, None, do_not_notify=True)
-                    print "SMS with OTP token sent to device %s" % device_id
+                    print("SMS with OTP token sent to device %s" % device_id)
                 elif device_type == "OneLogin Protect":
                     # Trigger PUSH and try verify
                     try_get_saml_response_verified = 0
                     saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, None, do_not_notify=False)
-                    print "PUSH with OTP token sent to device %s" % device_id
+                    print("PUSH with OTP token sent to device %s" % device_id)
                     while saml_endpoint_response and saml_endpoint_response.type == "pending" and try_get_saml_response_verified < MAX_ITER_GET_SAML_RESPONSE:
                         time.sleep(TIME_SLEEP_ON_RESPONSE_PENDING)
                         saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, None, do_not_notify=True)
@@ -226,7 +226,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                     if saml_endpoint_response and saml_endpoint_response.type == 'success':
                         verified_with_push = True
                     else:
-                        print "PUSH notification not confirmed, trying manual mode"
+                        print("PUSH notification not confirmed, trying manual mode")
 
                 if not verified_with_push:
                     # Otherwise, let's request OTP token to be inserted manually
@@ -477,13 +477,13 @@ def main():
         except ClientError as err:
             if 'Token must be redeemed within 5 minutes of issuance' in err.message or \
                'An error occurred (ExpiredTokenException) when calling the AssumeRoleWithSAML operation' in err.message: 
-                print err.message
-                print "Generating a new SAMLResponse with the data already provided...."
+                print(err.message)
+                print("Generating a new SAMLResponse with the data already provided....")
                 iterations.append(iterations[-1]+1)
                 continue
             elif "The requested DurationSeconds exceeds the MaxSessionDuration set for this role." in err.message:
-                print err.message
-                print "Introduce a new value, to be used on this Role, for DurationSeconds between 3600 and 43200. Previously was %s" % duration
+                print(err.message)
+                print("Introduce a new value, to be used on this Role, for DurationSeconds between 3600 and 43200. Previously was %s" % duration)
                 duration = get_duration()
                 iterations.append(iterations[-1]+1)
                 continue
