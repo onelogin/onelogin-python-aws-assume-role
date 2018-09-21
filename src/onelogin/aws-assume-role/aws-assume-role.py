@@ -101,6 +101,7 @@ def str2bool(v):
 
 def get_client(options):
     client_id = client_secret = ip = None
+    region = 'us'
 
     if options.client_id is not None and options.client_secret is not None:
         client_id = options.client_id
@@ -113,8 +114,8 @@ def get_client(options):
             if 'client_id' in data.keys() and 'client_secret' in data.keys():
                 client_id = data['client_id']
                 client_secret = data['client_secret']
-                if 'region' not in data.keys() or not data['region']:
-                    region = 'us'
+                if 'region' in data.keys() and data['region']:
+                    region = data['region']
                 if 'ip' in data.keys() and data['ip']:
                     ip = data['ip']
 
