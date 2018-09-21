@@ -113,8 +113,10 @@ def get_client(options):
             if 'client_id' in data.keys() and 'client_secret' in data.keys():
                 client_id = data['client_id']
                 client_secret = data['client_secret']
-                region = data.get('region', 'us')
-                ip = data.get('ip', None)
+                if 'region' not in data.keys() or not data['region']:
+                    region = 'us'
+                if 'ip' in data.keys() and data['ip']:
+                    ip = data['ip']
 
     if not client_id or not client_secret:
         raise Exception("OneLogin Client ID and Secret are required")
