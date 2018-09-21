@@ -116,7 +116,7 @@ def get_client(options):
                 region = data.get('region', 'us')
                 ip = data.get('ip', None)
 
-    if client_id is None or client_secret is None:
+    if not client_id or not client_secret:
         raise Exception("OneLogin Client ID and Secret are required")
 
     client = OneLoginClient(client_id, client_secret, region)
