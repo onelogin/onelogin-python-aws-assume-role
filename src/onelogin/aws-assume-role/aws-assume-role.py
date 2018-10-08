@@ -54,6 +54,9 @@ def get_options():
     parser.add_argument("-u", "--onelogin-username",
                         dest="username",
                         help="OneLogin username (email address)")
+    parser.add_argument("--onelogin-password",
+                        dest="password",
+                        help="OneLogin password")
     parser.add_argument("-a", "--onelogin-app-id",
                         dest="app_id",
                         help="OneLogin app id")
@@ -384,7 +387,10 @@ def main():
                     print("OneLogin Username: ")
                     username_or_email = sys.stdin.readline().strip()
 
-                password = getpass.getpass("\nOneLogin Password: ")
+                if options.password:
+                    password = options.password
+                else:
+                    password = getpass.getpass("\nOneLogin Password: ")
 
                 if options.app_id:
                     app_id = options.app_id
