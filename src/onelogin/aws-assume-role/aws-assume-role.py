@@ -76,6 +76,10 @@ def get_options():
     parser.add_argument("--aws-region",
                         dest="aws_region",
                         help="AWS region to use")
+    parser.add_argument("--aws-role-index",
+                        dest="aws_role_index",
+                        type=int,
+                        help="AWS role index to select")
 
     options = parser.parse_args()
 
@@ -442,12 +446,16 @@ def main():
                     print("-----------------------------------------------------------------------")
                     print("Select the desired AWS Role [0-%s]: " % (len(roles) - 1))
 
-                    role_option = get_selection(len(roles))
+                    if options.aws_role_index:
+                        role_option = options.aws_role_index
+                    else:
+                        role_option = get_selection(len(roles))
+                    
                     selected_role = roles[role_option]
-                    "Option %s selected, AWS Role: %s" % (role_option, selected_role)
+                    print("Option %s selected, AWS Role: %s" % (role_option, selected_role))
                 elif len(roles) == 1:
                     selected_role = roles[0]
-                    "Unique AWS Role available selected: %s" % (selected_role)
+                    print("Unique AWS Role available selected: %s" % (selected_role))
                 else:
                     print("SAMLResponse from Identity Provider does not contain available AWS Role for this user")
 
