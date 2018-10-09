@@ -113,6 +113,13 @@ AWS region (`--aws-region`)
 every time, you can specify these parameters as command-line arguments and
 the tool won't ask for them any more._
 
+_Note: Specifying your password directly with `--onelogin-password` is bad practice,
+you should use that flag together with password managers, eg. with the OSX Keychain:
+`--onelogin-password $(security find-generic-password -a $USER -s onelogin -w)`,
+so your password won't be saved in you command line history.
+Please note that your password **will** be visible in your process list,
+if you use this flag (as the expanded command line arguments are part of the name of the process)._
+
 With that data, a SAMLResponse is retrieved. And possible AWS Role are retrieved.
 
 #### Step 2. Select AWS Role to be assumed.
