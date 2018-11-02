@@ -185,6 +185,8 @@ You can also make it regenerate and update the credentials file by using the `--
 
 You can also make it interactive, with the `-x` or `--interactive`option, and at the end of the iteration, you will be asked if want to generate new credentials for a new user or a new role.
 
+The selection of the AWS account and Role can be also be done with the --aws-account-id and --aws-role-name parameters.
+
 For more info execute:
 
 ```sh
