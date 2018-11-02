@@ -76,6 +76,12 @@ def get_options():
     parser.add_argument("--aws-region",
                         dest="aws_region",
                         help="AWS region to use")
+    parser.add_argument("--aws-account-id",
+                        dest="aws_account_id",
+                        help="AWS account id from where to select the role")
+    parser.add_argument("--aws-role-name",
+                        dest="aws_role_name",
+                        help="AWS role name to select")
 
     options = parser.parse_args()
 
@@ -89,6 +95,9 @@ def get_options():
         options.duration = 3600
     elif options.duration > 43200:
         options.duration = 43200
+
+    if options.aws_role_name is None and options.aws_account_id or options.aws_role_name and options.aws_account_id is None:
+        parser.error("--aws-account-id and --aws-role-name need to be set together")
 
     return options
 
@@ -430,24 +439,39 @@ def main():
                     sys.exit()
             else:
                 roles = attributes['https://aws.amazon.com/SAML/Attributes/Role']
+
+
                 selected_role = None
                 if len(roles) > 1:
                     print("\nAvailable AWS Roles")
                     print("-----------------------------------------------------------------------")
+                    roles_by_app = {}
                     for index, role in enumerate(roles):
-                        role_info = role.split(":")
+                        role_info = role.split(",")[0].split(":")
                         account_id = role_info[4]
                         role_name = role_info[5].replace("role/", "")
                         print(" %s | %s (Account %s)" % (index, role_name, account_id))
+                        if account_id in roles_by_app:
+                            roles_by_app[account_id].append((index, role_name))
+                        else:
+                            roles_by_app[account_id] = [(index, role_name)]
                     print("-----------------------------------------------------------------------")
-                    print("Select the desired AWS Role [0-%s]: " % (len(roles) - 1))
-
-                    role_option = get_selection(len(roles))
+                    
+                    role_option = None
+                    if options.aws_account_id and options.aws_role_name and options.aws_account_id in roles_by_app:
+                        role_option = next((index for index,role_name in roles_by_app[options.aws_account_id] if role_name == options.aws_role_name), None)
+                    
+                    if role_option is None:
+                        if options.aws_account_id and options.aws_role_name:
+                            print("SAMLResponse from Identity Provider does not contain available AWS Role: %s for AWS Account: %s" % (options.aws_role_name, options.aws_account_id))
+                        print("Select the desired AWS Role [0-%s]: " % (len(roles) - 1))
+                        role_option = get_selection(len(roles))
+                    
                     selected_role = roles[role_option]
-                    "Option %s selected, AWS Role: %s" % (role_option, selected_role)
+                    print("Option %s selected, AWS Role: %s" % (role_option, selected_role))
                 elif len(roles) == 1:
                     selected_role = roles[0]
-                    "Unique AWS Role available selected: %s" % (selected_role)
+                    print("Unique AWS Role available selected: %s" % (selected_role))
                 else:
                     print("SAMLResponse from Identity Provider does not contain available AWS Role for this user")
 
