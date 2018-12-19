@@ -527,6 +527,8 @@ def main():
         access_key_id = aws_session_token['Credentials']['AccessKeyId']
         secret_access_key = aws_session_token['Credentials']['SecretAccessKey']
         session_token = aws_session_token['Credentials']['SessionToken']
+        security_token = aws_session_token['Credentials']['SessionToken']
+        session_expiration = aws_session_token['Credentials']['Expiration'].strftime('%Y-%m-%dT%H:%M:%S%z')
         arn = aws_session_token['AssumedRoleUser']['Arn']
 
         if options.profile_name is None and options.file is None:
@@ -544,6 +546,8 @@ def main():
             print("%s AWS_SESSION_TOKEN=%s\n" % (action, session_token))
             print("%s AWS_ACCESS_KEY_ID=%s\n" % (action, access_key_id))
             print("%s AWS_SECRET_ACCESS_KEY=%s\n" % (action, secret_access_key))
+            print("%s AWS_SESSION_EXPIRATION=%s\n" % (action, session_expiration))
+            print("%s AWS_SECURITY_TOKEN=%s\n" % (action, security_token))
         else:
             if options.file is None:
                 options.file = os.path.expanduser('~/.aws/credentials')
@@ -559,6 +563,8 @@ def main():
                 'aws_access_key_id': access_key_id,
                 'aws_secret_access_key': secret_access_key,
                 'aws_session_token': session_token,
+                'aws_session_expiration': session_expiration,
+                'aws_security_token': security_token
             }
             config_file_writer.update_config(updated_config, options.file)
 
