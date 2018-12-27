@@ -8,7 +8,7 @@ from setuptools import setup
 
 
 version = {}
-with open("src/onelogin/aws_assume_role/version.py") as fp:
+with open("src/onelogin/aws-assume-role/version.py") as fp:
     exec(fp.read(), version)
 
 setup(
@@ -28,7 +28,7 @@ setup(
     license='MIT',
     url='https://github.com/onelogin/onelogin-python-aws-cli-assume-role',
     packages=[
-        'onelogin/aws_assume_role'
+        'onelogin/aws-assume-role'
     ],
     package_dir={
         '': 'src',
@@ -37,9 +37,6 @@ setup(
         'boto3==1.7.84',
         'onelogin==1.5.0'
     ],
-    entry_points={
-        'console_scripts': ['onelogin-aws-assume-role=onelogin.aws_assume_role.aws_assume_role:main']
-    },
     test_suite='tests',
     extras_require={
         'test': (

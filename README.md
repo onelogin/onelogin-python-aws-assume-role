@@ -7,7 +7,7 @@ Users will be able to choose from among multiple AWS roles in multiple AWS accou
 
 This is really useful for customers that run complex environments with multiple AWS accounts, roles and many different people that need periodic access as it saves manually generating and managing AWS credentials.
 
-This repository contains a python script at [src/onelogin/aws-assume-role/aws-assume-role.py](https://github.com/onelogin/onelogin-python-aws-assume-role/blob/master/src/onelogin/aws-assume-role/aws-assume-role.py) that you can execute using `onelogin-aws-assume-role` in order to retrieve the AWS credentials.
+This repository contains a python script at [src/onelogin/aws-assume-role/aws-assume-role.py](https://github.com/onelogin/onelogin-python-aws-assume-role/blob/master/src/onelogin/aws-assume-role/aws-assume-role.py) that you can execute in order to retrieve the AWS credentials.
 
 ## AWS and OneLogin prerequisites
 
@@ -95,7 +95,7 @@ Place that file in the same path where the python script is invoked.
 * Enter your credentials in the onelogin.sdk.json file as explained above
 * Save the onelogin.sdk.json file in the root directory of the repo
 * docker build . -t awsaccess:latest
-* docker run -it -v ~/.aws:/root/.aws awsaccess:latest onelogin-aws-assume-role --onelogin-username {user_email} --onelogin-subdomain {subdomain} --onelogin-app-id {app_id} --aws-region {aws region} --profile default
+* docker run -it -v ~/.aws:/root/.aws awsaccess:latest python src/onelogin/aws-assume-role/aws-assume-role.py --onelogin-username {user_email} --onelogin-subdomain {subdomain} --onelogin-app-id {app_id} --aws-region {aws region} --profile default
 
 ### How the process works
 
@@ -168,13 +168,13 @@ to install dependencies.
 Assuming you have your AWS Multi Account app set up correctly and you’re using valid OneLogin API credentials stored on the onelogin.sdk.json placed at the root of the repository, using this tool is as simple as following the prompts.
 
 ```sh
-> onelogin-aws-assume-role
+> python src/onelogin/aws-assume-role/aws-assume-role.py
 ```
 
 Or alternately save them to your AWS credentials file to enable faster access from any terminal.
 
 ```sh
-> onelogin-aws-assume-role --profile profilename
+> python src/onelogin/aws-assume-role/aws-assume-role.py --profile profilename
 ```
 
 By default, the credentials only last for 1 hour, but you can [edit that restriction on AWS and set a max of 12h session duration](https://aws.amazon.com/es/blogs/security/enable-federated-api-access-to-your-aws-resources-for-up-to-12-hours-using-iam-roles/).
@@ -190,7 +190,7 @@ The selection of the AWS account and Role can be also be done with the --aws-acc
 For more info execute:
 
 ```sh
-> onelogin-aws-assume-role --help
+> python src/onelogin/aws-assume-role/aws-assume-role.py --help
 ```
 
 ## Test your credentials with AWS CLI
