@@ -194,7 +194,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                 print("Authenticate using one of these devices:")
             else:
                 if not check_device_exists(devices, mfa_verify_info['device_id']):
-                    print("\nThe device selected with ID %s is not available anymore" % device_id)
+                    print("\nThe device selected with ID %s is not available anymore" % mfa_verify_info['device_id'])
                     print("Those are the devices available now:")
                     mfa_verify_info = None
                 else:
