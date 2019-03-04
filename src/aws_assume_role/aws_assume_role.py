@@ -472,15 +472,17 @@ def main():
             password = getpass.getpass("\nOneLogin Password: ")
             ask_for_user_again = False
             ask_for_role_again = True
-        elif (i == 0 and result == None) or (i == 0 and options.loop is not None):
+        elif (i == 0 and result == None) or (i == 0 and options.loop > 1):
                 # Capture OneLogin Account Details
                 if options.username:
                     username_or_email = options.username
+                elif result and result.get('username_or_email'):
+                    username_or_email = result['username_or_email']
                 else:
                     print("OneLogin Username: ")
                     username_or_email = sys.stdin.readline().strip()
 
-                if options.loop is not None and options.password is None and result is not None:
+                if options.loop > 1 and options.password is None and result is not None:
                     print("\nSAML cache is valid, but the password is required when using '--loop/-l'.")
 
                 if options.password:
