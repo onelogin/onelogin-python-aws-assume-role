@@ -26,7 +26,7 @@ setup(
     author='OneLogin',
     author_email='support@onelogin.com',
     license='MIT',
-    url='https://github.com/onelogin/onelogin-python-aws-cli-assume-role',
+    url='https://github.com/onelogin/onelogin-python-aws-assume-role',
     packages=[
         'aws_assume_role'
     ],

@@ -14,7 +14,7 @@ from botocore.exceptions import ClientError
 from lxml import etree as ET
 from onelogin.api.client import OneLoginClient
 
-from writer import ConfigFileWriter
+from aws_assume_role.writer import ConfigFileWriter
 
 
 MFA_ATTEMPS_FOR_WARNING = 3
