@@ -12,6 +12,8 @@ import boto3
 import botocore
 from botocore.exceptions import ClientError
 from lxml import etree as ET
+from datetime import datetime
+from base64 import b64decode
 from onelogin.api.client import OneLoginClient
 
 from aws_assume_role.writer import ConfigFileWriter
@@ -20,6 +22,8 @@ from aws_assume_role.writer import ConfigFileWriter
 MFA_ATTEMPS_FOR_WARNING = 3
 TIME_SLEEP_ON_RESPONSE_PENDING = 15
 MAX_ITER_GET_SAML_RESPONSE = 6
+DEFAULT_AWS_DIR = os.path.expanduser('~/.aws')
+SAML_CACHE_PATH = os.path.join(DEFAULT_AWS_DIR, 'saml_cache.txt')
 
 
 def get_options():
@@ -82,6 +86,10 @@ def get_options():
     parser.add_argument("--aws-role-name",
                         dest="aws_role_name",
                         help="AWS role name to select")
+    parser.add_argument("--no-cache",
+                        dest="no_cache",
+                        help="Does not use the SAML cache if it exists.",
+                        action="store_true")
 
     options = parser.parse_args()
 
@@ -295,7 +303,6 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
         'saml_response': saml_endpoint_response.saml_response,
         'mfa_verify_info': mfa_verify_info,
         'username_or_email': username_or_email,
-        'password': password,
         'onelogin_subdomain': onelogin_subdomain,
     }
     return result
@@ -353,6 +360,72 @@ def get_duration():
     return answer
 
 
+def get_saml_assertion_from_cache():
+    """
+    Gets the SAML assertion and related user information from cache. Will return nothing if the cache is expired.
+
+    Returns:
+        cache_contents (dict): decoded SAML assertion.
+    """
+    if not os.path.exists(SAML_CACHE_PATH):
+        print('Cache file does not exist!')
+        return
+
+    with open(SAML_CACHE_PATH, 'r') as f:
+        cache_contents = json.load(f)
+
+    if not is_valid_saml_assertion(b64decode(cache_contents['saml_response'])):
+        print('Invalid or expired SAML response.')
+        return None
+    
+    return cache_contents
+
+
+def write_saml_assertion_to_cache(contents):
+    """
+    Writes SAML assertion and related user information from OneLogin to a cache file.
+
+    Arguments:
+        contents (dict): all information from OneLogin returned after a successful SAML authentication.
+    """
+    print('Writing SAML cache to {saml_cache}'.format(saml_cache=SAML_CACHE_PATH))
+    if not os.path.exists(DEFAULT_AWS_DIR):
+        os.makedirs(DEFAULT_AWS_DIR)
+    with open(SAML_CACHE_PATH, 'w') as f:
+        json.dump(contents, f)
+
+
+def is_valid_saml_assertion(saml_xml):
+    """
+    Validates that a SAML assertion has not expired by checking the 'NotBefore' and 'NotOnOrAfter' attributes.
+
+    Arguments:
+        saml_xml (str): SAML assertion XML as a string.
+
+    Returns:
+        bool: True if assertion is not yet expired, False if it is.
+    """
+    if saml_xml is None:
+        return False
+
+    try:
+        doc = ET.fromstring(saml_xml)
+        conditions = list(doc.iter(tag='{urn:oasis:names:tc:SAML:2.0:assertion}Conditions'))
+        not_before_str = conditions[0].get('NotBefore')
+        not_on_or_after_str = conditions[0].get('NotOnOrAfter')
+
+        now = datetime.utcnow()
+        not_before = datetime.strptime(not_before_str, "%Y-%m-%dT%H:%M:%SZ")
+        not_on_or_after = datetime.strptime(not_on_or_after_str, "%Y-%m-%dT%H:%M:%SZ")
+
+        if not_before <= now < not_on_or_after:
+            return True
+        else:
+            return False
+    except Exception as e:
+        return False
+
+
 def main():
     print("\nOneLogin AWS Assume Role Tool\n")
 
@@ -377,10 +450,20 @@ def main():
     sleep = False
     iterations = range(0, options.loop)
     duration = options.duration
+
+    
     for i in iterations:
         if sleep:
             time.sleep(options.time * 60)
             sleep = False
+
+        if options.no_cache:
+            print("Skipping check for SAML cache")
+            result = None
+        else:
+            result = get_saml_assertion_from_cache()
+            if result:
+                print("Found a valid SAML cache!")
 
         if ask_for_user_again:
             print("OneLogin Username: ")
@@ -389,13 +472,18 @@ def main():
             password = getpass.getpass("\nOneLogin Password: ")
             ask_for_user_again = False
             ask_for_role_again = True
-        elif i == 0:
+        elif (i == 0 and result == None) or (i == 0 and options.loop > 1):
                 # Capture OneLogin Account Details
                 if options.username:
                     username_or_email = options.username
+                elif result and result.get('username_or_email'):
+                    username_or_email = result['username_or_email']
                 else:
                     print("OneLogin Username: ")
                     username_or_email = sys.stdin.readline().strip()
+
+                if options.loop > 1 and options.password is None and result is not None:
+                    print("\nSAML cache is valid, but the password is required when using '--loop/-l'.")
 
                 if options.password:
                     password = options.password
@@ -414,12 +502,14 @@ def main():
                     print("\nOnelogin Instance Sub Domain: ")
                     onelogin_subdomain = sys.stdin.readline().strip()
 
-        result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info)
+        if result is None:
+            result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info)
+            if not options.no_cache:
+                write_saml_assertion_to_cache(result)
 
         mfa_verify_info = result['mfa_verify_info']
         saml_response = result['saml_response']
         username_or_email = result['username_or_email']
-        password = result['password']
         onelogin_subdomain = result['onelogin_subdomain']
 
         if i == 0 or ask_for_role_again:
