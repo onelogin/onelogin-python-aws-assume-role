@@ -16,8 +16,7 @@ from datetime import datetime
 from base64 import b64decode
 from onelogin.api.client import OneLoginClient
 
-from writer import ConfigFileWriter
-#from aws_assume_role.writer import ConfigFileWriter
+from aws_assume_role.writer import ConfigFileWriter
 
 
 MFA_ATTEMPS_FOR_WARNING = 3
