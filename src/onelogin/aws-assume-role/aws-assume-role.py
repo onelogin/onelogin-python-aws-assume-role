@@ -70,7 +70,7 @@ def get_options():
 
 
 def get_client(options):
-    client_id = client_secret = None
+    client_id = client_secret = ip = None
 
     if options.client_id is not None and options.client_secret is not None:
         client_id = options.client_id
