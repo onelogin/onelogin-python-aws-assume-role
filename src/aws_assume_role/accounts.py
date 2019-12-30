@@ -13,23 +13,17 @@ def identify_known_accounts(data):
     :return: Account description
     """
     # If the accounts custom aliases yaml file does not exist just default to normal behavior
-    try:
-        if os.path.isfile('accounts.yaml'):
-            accountsfile = open('onelogin.sdk.json').read()
-            contents = yaml.load(accountsfile, Loader=yaml.FullLoader)
+    if os.path.isfile('accounts.yaml'):
+        accountsfile = open('accounts.yaml').read()
+        contents = yaml.load(accountsfile, Loader=yaml.FullLoader)
+        if 'accounts' in contents.keys():
             accounts = contents["accounts"]
             for acct in accounts.keys():
                 if acct in data:
                     return accounts[acct]
-            return "Unidentified"
-
-    except FileNotFoundError:
+        return "Unidentified"
+    else:
         return ""
-    except yaml.YAMLError:
-        print("ERROR: Your YAML configuration for the 'accounts.yaml' seems to be formatted incorrectly. \
-                             Please double check.  Defaulting to not display account aliases.")
-        return ""
-
 
 def pretty_choices(index, role_name, account_id):
     """
