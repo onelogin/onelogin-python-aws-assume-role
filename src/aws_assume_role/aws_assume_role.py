@@ -110,7 +110,7 @@ def get_options():
     if 'username' in config.keys():
         options.username = config['username']
     if 'profile' in config.keys():
-        options.profile = config['profile']
+        options.profile_name = config['profile']
 
     return options
 
