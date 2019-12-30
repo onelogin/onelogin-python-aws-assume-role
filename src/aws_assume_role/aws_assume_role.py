@@ -113,6 +113,8 @@ def get_options():
         options.username = config['username']
     if 'profile' in config.keys():
         options.profile_name = config['profile']
+    if 'duration' in config.keys():
+        options.duration = config['duration']
 
     return options
 
