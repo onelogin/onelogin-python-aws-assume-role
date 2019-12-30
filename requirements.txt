@@ -1,0 +1,4 @@
+####### requirements.txt #######
+boto3
+onelogin
+pyyaml

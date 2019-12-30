@@ -19,6 +19,8 @@ try:
 except ImportError:
     from writer import ConfigFileWriter
 
+# accounts aliases
+from .accounts import pretty_choices
 
 MFA_ATTEMPS_FOR_WARNING = 3
 TIME_SLEEP_ON_RESPONSE_PENDING = 15
@@ -468,7 +470,9 @@ def main():
                         role_info = role.split(",")[0].split(":")
                         account_id = role_info[4]
                         role_name = role_info[5].replace("role/", "")
-                        print(" %s | %s (Account %s)" % (index, role_name, account_id))
+
+                        pretty_choices(index, role_name, account_id)
+
                         if account_id in roles_by_app:
                             roles_by_app[account_id].append((index, role_name))
                         else:

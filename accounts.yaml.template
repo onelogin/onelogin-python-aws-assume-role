@@ -1,0 +1,13 @@
+#
+# AWS Accounts
+#
+# Account number and account alias as desired
+# This will be used (if present) to display a friendly alias for your account in the account pick list
+# This should contain "accountnum: friendly name" as shown below and then renamed to "accounts.yaml" and
+# placed in the /src/aws_assume_role package directory BEFORE installation.
+#
+# If the file is not present the tool will run normally but wil, not display friendly aws account names
+#
+#accounts:
+#  "987654321012": Prod account
+#  "123456789012": Dev Account
