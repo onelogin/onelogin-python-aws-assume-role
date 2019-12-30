@@ -72,10 +72,10 @@ Is a json file named onelogin.sdk.json as follows
 	"client_secret": "",
 	"region": "",
 	"ip": "",
-  "app_id": "",
-  "subdomain": "",
-  "username": "",
-  "profile": ""
+	"app_id": "",
+	"subdomain": "",
+	"username": "",
+	"profile": ""
 }
 ```
 
