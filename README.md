@@ -72,11 +72,7 @@ Is a json file named onelogin.sdk.json as follows:
 	"client_id": "",
 	"client_secret": "",
 	"region": "",
-	"ip": "",
-	"app_id": "",
-	"subdomain": "",
-	"username": "",
-	"profile": ""
+  "ip": ""
 }
 ```
 
@@ -86,18 +82,44 @@ Where:
  * client_secret  Onelogin OAuth2 client secret
  * region  Indicates where the instance is hosted. Possible values: 'us' or 'eu'.
  * ip  Indicates the IP to be used on the method to retrieve the SAMLResponse in order to bypass MFA if that IP was previously whitelisted.
+
+For security reasons, IP only can be provided at the onelogin.sdk.json.
+On a shared machine where multiple users has access, That file should only be readable by the root of the machine that also controls the
+client_id / client_secret, and not by an end user, to prevent him manipulate the IP value.
+
+Place the file in the same path where the python script is invoked.
+
+
+There is an optional file onelogin.aws.json, that can be used if you plan to execute the script with some fixed values and avoid providing it on the command line each time.
+
+```json
+{
+  "app_id": "",
+  "subdomain": "",
+  "username": "",
+  "profile": "",
+  "duration": "",
+  "aws_region": "",
+  "aws_account_id": "",
+  "aws_role_name": ""
+}
+```
+
+Where:
+
  * app_id Onelogin AWS integration app id
  * subdomain Needs to be set to the correct subdomain for your AWS integration
  * username The email address that is used to authenticate against Onelogin
  * profile The AWS profile to use in ~/.aws/credentials
+ * duration Desired AWS Credential Duration
+ * aws_region AWS region to use
+ * aws_account_id AWS account id to be used
+ * aws_role_name AWS role name to select
 
-For security reasons, IP only can be provided at the onelogin.sdk.json.
-On a shared machines where multiple users has access, That file should only be readable by the root of the machine that also controls the
-client_id / client_secret, and not by an end user, to prevent him manipulate the IP value.
+The values provided on the command line will have preference
+over the values defined on this file.
 
-Place that file in the same path where the python script is invoked.
-
-There is an optional file that can be created to give more human readable names to the account list, named accounts.yaml, which should be placed in the same path where the python script is invoked:
+In addition, there is another optional file that can be created to give more human readable names to the account list, named accounts.yaml, which should be placed in the same path where the python script is invoked:
 
 ```yaml
 accounts:
@@ -168,7 +190,7 @@ Activate then the environment
 > source venv/bin/activate
 ```
 
-Then run 
+Then run
 
 ```sh
 > pip setup install

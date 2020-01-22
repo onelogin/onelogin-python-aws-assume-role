@@ -70,7 +70,6 @@ def get_options():
                         help="OneLogin subdomain")
     parser.add_argument("-z", "--duration",
                         dest="duration",
-                        default=3600,
                         type=int,
                         help="Desired AWS Credential Duration")
     parser.add_argument("-x", "--interactive",
@@ -90,31 +89,41 @@ def get_options():
 
     options = parser.parse_args()
 
+    # Read params from file, but only use them
+    # if no value provided on command line
+    config = get_config()
+    if 'app_id' in config.keys() and config['app_id'] and not options.app_id:
+        options.app_id = config['app_id']
+    if 'subdomain' in config.keys() and config['subdomain'] and not options.subdomain:
+        options.subdomain = config['subdomain']
+    if 'username' in config.keys() and config['username'] and not options.username:
+        options.username = config['username']
+    if 'profile' in config.keys() and config['profile'] and not options.profile:
+        options.profile_name = config['profile']
+    if 'duration' in config.keys() and config['duration'] and not options.duration:
+        options.duration = config['duration']
+    if 'aws_region' in config.keys() and config['aws_region'] and not options.aws_region:
+        options.aws_region = config['aws_region']
+    if 'aws_account_id' in config.keys() and config['aws_account_id'] and not options.aws_account_id:
+        options.aws_account_id = config['aws_account_id']
+    if 'aws_role_name' in config.keys() and config['aws_role_name'] and not options.aws_role_name:
+        options.aws_role_name = config['aws_role_name']
+
     options.time = options.time
     if options.time < 15:
         options.time = 15
     elif options.time > 60:
         options.time = 60
 
-    if options.duration < 3600:
+    if not options.duration:
         options.duration = 3600
+    elif options.duration < 900:
+        options.duration = 900
     elif options.duration > 43200:
         options.duration = 43200
 
     if options.aws_role_name is None and options.aws_account_id or options.aws_role_name and options.aws_account_id is None:
         parser.error("--aws-account-id and --aws-role-name need to be set together")
-
-    config = get_config()
-    if 'app_id' in config.keys():
-        options.app_id = config['app_id']
-    if 'subdomain' in config.keys():
-        options.subdomain = config['subdomain']
-    if 'username' in config.keys():
-        options.username = config['username']
-    if 'profile' in config.keys():
-        options.profile_name = config['profile']
-    if 'duration' in config.keys():
-        options.duration = config['duration']
 
     return options
 
@@ -128,8 +137,8 @@ def str2bool(v):
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def get_config():
-    if os.path.isfile('onelogin.sdk.json'):
-        json_data = open('onelogin.sdk.json').read()
+    if os.path.isfile('onelogin.aws.json'):
+        json_data = open('onelogin.aws.json').read()
         return json.loads(json_data)
 
 def get_client(options):
