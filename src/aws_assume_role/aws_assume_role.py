@@ -75,7 +75,7 @@ def get_options():
     parser.add_argument("-x", "--interactive",
                         dest="interactive",
                         default=False,
-                        type=str2bool,
+                        action="store_true",
                         help="Be asked how procced in each iteration?")
     parser.add_argument("--aws-region",
                         dest="aws_region",
@@ -126,15 +126,6 @@ def get_options():
         parser.error("--aws-account-id and --aws-role-name need to be set together")
 
     return options
-
-
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 def get_config():
     if os.path.isfile('onelogin.aws.json'):
@@ -326,7 +317,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
         'mfa_verify_info': mfa_verify_info,
         'username_or_email': username_or_email,
         'password': password,
-        'onelogin_subdomain': onelogin_subdomain,
+        'onelogin_subdomain': onelogin_subdomain
     }
     return result
 

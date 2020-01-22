@@ -193,13 +193,13 @@ Activate then the environment
 Then run
 
 ```sh
-> pip setup install
+> python setup install
 ```
 
 or
 
 ```sh
-> setup.py develop
+> python setup.py develop
 ```
 
 to install dependencies.

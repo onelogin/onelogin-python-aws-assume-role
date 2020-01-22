@@ -36,9 +36,9 @@ setup(
     },
     package_data={'': ['accounts.yaml','onelogin.sdk.json']},
     install_requires=[
-        'boto3==1.7.84',
-        'onelogin==1.5.0',
-        'pyyaml==5.1.2',
+        'boto3>=1.7.84',
+        'onelogin>=1.5.0',
+        'pyyaml>=5.1.2',
     ],
     entry_points={
         'console_scripts': ['onelogin-aws-assume-role=aws_assume_role.aws_assume_role:main']
