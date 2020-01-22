@@ -65,13 +65,18 @@ python setup.py install
 
 The python script uses a settings file, where [OneLogin SDK properties](https://github.com/onelogin/onelogin-python-sdk#getting-started) are placed.
 
-Is a json file named onelogin.sdk.json as follows
+Is a json file named onelogin.sdk.json as follows:
+
 ```json
 {
 	"client_id": "",
 	"client_secret": "",
 	"region": "",
-	"ip": ""
+	"ip": "",
+	"app_id": "",
+	"subdomain": "",
+	"username": "",
+	"profile": ""
 }
 ```
 
@@ -81,12 +86,26 @@ Where:
  * client_secret  Onelogin OAuth2 client secret
  * region  Indicates where the instance is hosted. Possible values: 'us' or 'eu'.
  * ip  Indicates the IP to be used on the method to retrieve the SAMLResponse in order to bypass MFA if that IP was previously whitelisted.
+ * app_id Onelogin AWS integration app id
+ * subdomain Needs to be set to the correct subdomain for your AWS integration
+ * username The email address that is used to authenticate against Onelogin
+ * profile The AWS profile to use in ~/.aws/credentials
 
 For security reasons, IP only can be provided at the onelogin.sdk.json.
 On a shared machines where multiple users has access, That file should only be readable by the root of the machine that also controls the
 client_id / client_secret, and not by an end user, to prevent him manipulate the IP value.
 
 Place that file in the same path where the python script is invoked.
+
+There is an optional file that can be created to give more human readable names to the account list, named accounts.yaml, which should be placed in the same path where the python script is invoked:
+
+```yaml
+accounts:
+  "987654321012": Prod account
+  "123456789012": Dev Account
+```
+
+This isn't needed for the script to function but it provides a better user experience.
 
 ### Docker installation method
 

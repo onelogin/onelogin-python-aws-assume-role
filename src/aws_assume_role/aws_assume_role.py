@@ -19,6 +19,8 @@ try:
 except ImportError:
     from writer import ConfigFileWriter
 
+# accounts aliases
+from .accounts import pretty_choices
 
 MFA_ATTEMPS_FOR_WARNING = 3
 TIME_SLEEP_ON_RESPONSE_PENDING = 15
@@ -102,6 +104,18 @@ def get_options():
     if options.aws_role_name is None and options.aws_account_id or options.aws_role_name and options.aws_account_id is None:
         parser.error("--aws-account-id and --aws-role-name need to be set together")
 
+    config = get_config()
+    if 'app_id' in config.keys():
+        options.app_id = config['app_id']
+    if 'subdomain' in config.keys():
+        options.subdomain = config['subdomain']
+    if 'username' in config.keys():
+        options.username = config['username']
+    if 'profile' in config.keys():
+        options.profile_name = config['profile']
+    if 'duration' in config.keys():
+        options.duration = config['duration']
+
     return options
 
 
@@ -113,6 +127,10 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+def get_config():
+    if os.path.isfile('onelogin.sdk.json'):
+        json_data = open('onelogin.sdk.json').read()
+        return json.loads(json_data)
 
 def get_client(options):
     client_id = client_secret = ip = None
@@ -454,23 +472,25 @@ def main():
                         role_info = role.split(",")[0].split(":")
                         account_id = role_info[4]
                         role_name = role_info[5].replace("role/", "")
-                        print(" %s | %s (Account %s)" % (index, role_name, account_id))
+
+                        pretty_choices(index, role_name, account_id)
+
                         if account_id in roles_by_app:
                             roles_by_app[account_id].append((index, role_name))
                         else:
                             roles_by_app[account_id] = [(index, role_name)]
                     print("-----------------------------------------------------------------------")
-                    
+
                     role_option = None
                     if options.aws_account_id and options.aws_role_name and options.aws_account_id in roles_by_app:
                         role_option = next((index for index,role_name in roles_by_app[options.aws_account_id] if role_name == options.aws_role_name), None)
-                    
+
                     if role_option is None:
                         if options.aws_account_id and options.aws_role_name:
                             print("SAMLResponse from Identity Provider does not contain available AWS Role: %s for AWS Account: %s" % (options.aws_role_name, options.aws_account_id))
                         print("Select the desired AWS Role [0-%s]: " % (len(roles) - 1))
                         role_option = get_selection(len(roles))
-                    
+
                     selected_role = roles[role_option]
                     print("Option %s selected, AWS Role: %s" % (role_option, selected_role))
                 elif len(roles) == 1:
@@ -513,7 +533,7 @@ def main():
             )
         except ClientError as err:
             if 'Token must be redeemed within 5 minutes of issuance' in err.message or \
-               'An error occurred (ExpiredTokenException) when calling the AssumeRoleWithSAML operation' in err.message: 
+               'An error occurred (ExpiredTokenException) when calling the AssumeRoleWithSAML operation' in err.message:
                 print(err.message)
                 print("Generating a new SAMLResponse with the data already provided....")
                 iterations.append(iterations[-1]+1)

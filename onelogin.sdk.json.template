@@ -1,6 +1,11 @@
 {
-	"client_id": "",
-	"client_secret": "",
-	"region": "",
-	"ip": ""
+  "client_id": "",
+  "client_secret": "",
+  "region": "",
+  "ip": "",
+  "app_id": "",
+  "subdomain": "",
+  "username": "",
+  "profile": "",
+  "duration": 28800
 }
