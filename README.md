@@ -71,9 +71,9 @@ Is a json file named onelogin.sdk.json as follows:
 
 ```json
 {
-	"client_id": "",
-	"client_secret": "",
-	"region": "",
+  "client_id": "",
+  "client_secret": "",
+  "region": "",
   "ip": ""
 }
 ```
