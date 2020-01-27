@@ -16,11 +16,11 @@ from onelogin.api.client import OneLoginClient
 
 try:
     from aws_assume_role.writer import ConfigFileWriter
+    from aws_assume_role.accounts import pretty_choices
 except ImportError:
     from writer import ConfigFileWriter
+    from accounts import pretty_choices
 
-# accounts aliases
-from .accounts import pretty_choices
 
 MFA_ATTEMPS_FOR_WARNING = 3
 TIME_SLEEP_ON_RESPONSE_PENDING = 15
@@ -92,22 +92,23 @@ def get_options():
     # Read params from file, but only use them
     # if no value provided on command line
     config = get_config()
-    if 'app_id' in config.keys() and config['app_id'] and not options.app_id:
-        options.app_id = config['app_id']
-    if 'subdomain' in config.keys() and config['subdomain'] and not options.subdomain:
-        options.subdomain = config['subdomain']
-    if 'username' in config.keys() and config['username'] and not options.username:
-        options.username = config['username']
-    if 'profile' in config.keys() and config['profile'] and not options.profile:
-        options.profile_name = config['profile']
-    if 'duration' in config.keys() and config['duration'] and not options.duration:
-        options.duration = config['duration']
-    if 'aws_region' in config.keys() and config['aws_region'] and not options.aws_region:
-        options.aws_region = config['aws_region']
-    if 'aws_account_id' in config.keys() and config['aws_account_id'] and not options.aws_account_id:
-        options.aws_account_id = config['aws_account_id']
-    if 'aws_role_name' in config.keys() and config['aws_role_name'] and not options.aws_role_name:
-        options.aws_role_name = config['aws_role_name']
+    if config is not None:
+        if 'app_id' in config.keys() and config['app_id'] and not options.app_id:
+            options.app_id = config['app_id']
+        if 'subdomain' in config.keys() and config['subdomain'] and not options.subdomain:
+            options.subdomain = config['subdomain']
+        if 'username' in config.keys() and config['username'] and not options.username:
+            options.username = config['username']
+        if 'profile' in config.keys() and config['profile'] and not options.profile:
+            options.profile_name = config['profile']
+        if 'duration' in config.keys() and config['duration'] and not options.duration:
+            options.duration = config['duration']
+        if 'aws_region' in config.keys() and config['aws_region'] and not options.aws_region:
+            options.aws_region = config['aws_region']
+        if 'aws_account_id' in config.keys() and config['aws_account_id'] and not options.aws_account_id:
+            options.aws_account_id = config['aws_account_id']
+        if 'aws_role_name' in config.keys() and config['aws_role_name'] and not options.aws_role_name:
+            options.aws_role_name = config['aws_role_name']
 
     options.time = options.time
     if options.time < 15:
@@ -365,7 +366,7 @@ def get_selection(max):
 
 def get_duration():
     answer = None
-    while (answer is None or type(answer) != int or answer not in range(3600, 43200)):
+    while (answer is None or type(answer) != int or answer not in range(900, 43200)):
         answer = sys.stdin.readline().strip()
         try:
             answer = int(answer)
@@ -373,6 +374,13 @@ def get_duration():
             pass
     return answer
 
+def ask_iteration_new_user():
+    print("\nDo you want to select a new user?  (y/n)")
+    answer = get_yes_or_not()
+    if answer == 'y':
+        return True
+    else:
+        sys.exit()
 
 def main():
     print("\nOneLogin AWS Assume Role Tool\n")
@@ -396,7 +404,7 @@ def main():
     ask_for_user_again = False
     ask_for_role_again = False
     sleep = False
-    iterations = range(0, options.loop)
+    iterations = list(range(0, options.loop))
     duration = options.duration
     for i in iterations:
         if sleep:
@@ -450,18 +458,12 @@ def main():
             attributes = get_attributes(saml_response)
             if 'https://aws.amazon.com/SAML/Attributes/Role' not in attributes.keys():
                 print("SAMLResponse from Identity Provider does not contain AWS Role info")
-
-                print("Do you want to select a new user?  (y/n)")
-                answer = get_yes_or_not()
-                if answer == 'y':
+                if ask_iteration_new_user():
                     ask_for_user_again = True
                     iterations.append(iterations[-1]+1)
                     continue
-                else:
-                    sys.exit()
             else:
                 roles = attributes['https://aws.amazon.com/SAML/Attributes/Role']
-
 
                 selected_role = None
                 if len(roles) > 1:
@@ -493,20 +495,24 @@ def main():
 
                     selected_role = roles[role_option]
                     print("Option %s selected, AWS Role: %s" % (role_option, selected_role))
-                elif len(roles) == 1:
-                    selected_role = roles[0]
-                    print("Unique AWS Role available selected: %s" % (selected_role))
+                elif len(roles) == 1 and roles[0]:
+                    import pdb;pdb.set_trace()
+                    data = roles[0].split(',')
+                    if data[0] == 'Default' or not data[1]:
+                        print("SAMLResponse from Identity Provider does not contain available AWS Account/Role for this user")
+                        if ask_iteration_new_user():
+                            ask_for_user_again = True
+                            iterations.append(iterations[-1]+1)
+                            continue
+                    else:
+                        selected_role = roles[0]
+                        print("Unique AWS Role available selected: %s" % (selected_role))
                 else:
                     print("SAMLResponse from Identity Provider does not contain available AWS Role for this user")
-
-                    print("Do you want to select a new user?  (y/n)")
-                    answer = get_yes_or_not()
-                    if answer == 'y':
+                    if ask_iteration_new_user():
                         ask_for_user_again = True
                         iterations.append(iterations[-1]+1)
                         continue
-                    else:
-                        sys.exit()
 
                 selected_role_data = selected_role.split(',')
                 role_arn = selected_role_data[0]
@@ -525,6 +531,12 @@ def main():
 
         conn = boto3.client('sts', region_name=aws_region, config=botocore_config)
         try:
+            if not role_arn or role_arn == "Default" or not principal_arn:
+                print("Missing/Invalid selected AWS Role or Account")
+                if ask_iteration_new_user():
+                    ask_for_user_again = True
+                    iterations.append(iterations[-1]+1)
+                    continue
             aws_session_token = conn.assume_role_with_saml(
                 RoleArn=role_arn,
                 PrincipalArn=principal_arn,
@@ -532,16 +544,31 @@ def main():
                 DurationSeconds=duration
             )
         except ClientError as err:
-            if 'Token must be redeemed within 5 minutes of issuance' in err.message or \
-               'An error occurred (ExpiredTokenException) when calling the AssumeRoleWithSAML operation' in err.message:
-                print(err.message)
+            if hasattr(err, 'message'):
+                error_msg = err.message
+            else:
+                error_msg = err.__str__()
+
+            if 'Token must be redeemed within 5 minutes of issuance' in error_msg or \
+               'An error occurred (ExpiredTokenException) when calling the AssumeRoleWithSAML operation' in error_msg:
+                print(error_msg)
                 print("Generating a new SAMLResponse with the data already provided....")
                 iterations.append(iterations[-1]+1)
                 continue
-            elif "The requested DurationSeconds exceeds the MaxSessionDuration set for this role." in err.message:
-                print(err.message)
-                print("Introduce a new value, to be used on this Role, for DurationSeconds between 3600 and 43200. Previously was %s" % duration)
+            elif "The requested DurationSeconds exceeds the MaxSessionDuration set for this role." in error_msg:
+                print(error_msg)
+                print("Introduce a new value, to be used on this Role, for DurationSeconds between 900 and 43200. Previously was %s" % duration)
                 duration = get_duration()
+                iterations.append(iterations[-1]+1)
+                continue
+            elif "Not authorized to perform sts:AssumeRoleWithSAML" in error_msg:
+                print(error_msg)
+                ask_for_role_again = True
+                iterations.append(iterations[-1]+1)
+                continue
+            elif "Request ARN is invalid" in error_msg:
+                print(error_msg)
+                ask_for_role_again = True
                 iterations.append(iterations[-1]+1)
                 continue
             else:

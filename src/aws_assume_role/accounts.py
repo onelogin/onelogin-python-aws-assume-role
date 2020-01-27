@@ -32,6 +32,6 @@ def pretty_choices(index, role_name, account_id):
     """
     account_alias = identify_known_accounts(account_id)
     if account_alias:
-        print(f" {index} | {account_alias} - {role_name} (Account: {account_id})")
+        print(" %s | %s - %s (Account: %s)"  % (index, account_alias, role_name, account_id))
     else:
         print(" %s | %s (Account %s)" % (index, role_name, account_id))
