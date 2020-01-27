@@ -19,7 +19,7 @@ def identify_known_accounts(data):
         if 'accounts' in contents.keys():
             accounts = contents["accounts"]
             for acct in accounts.keys():
-                if acct in data:
+                if acct == data:
                     return accounts[acct]
         return "Unidentified"
     else:
@@ -32,6 +32,6 @@ def pretty_choices(index, role_name, account_id):
     """
     account_alias = identify_known_accounts(account_id)
     if account_alias:
-        print(" %s | %s - %s (Account: %s)"  % (index, account_alias, role_name, account_id))
+        print(" %s | %s (Account: %s - %s)"  % (index, role_name, account_id, account_alias))
     else:
         print(" %s | %s (Account %s)" % (index, role_name, account_id))
