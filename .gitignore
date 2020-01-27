@@ -23,4 +23,5 @@ __pycache_
 /venv3
 virtualenv
 onelogin.sdk.json
+onelogin.aws.json
 accounts.yaml

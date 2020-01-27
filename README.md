@@ -38,6 +38,8 @@ It works with python2 and python3.
 
 * boto3  AWS Python SDK
 * onelogin  OneLogin Python SDK
+* pyyaml  YAML parser
+* lxml  XML and HTML processor
 
 ## Getting started
 
