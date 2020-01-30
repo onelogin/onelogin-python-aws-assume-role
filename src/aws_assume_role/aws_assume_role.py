@@ -496,7 +496,6 @@ def main():
                     selected_role = roles[role_option]
                     print("Option %s selected, AWS Role: %s" % (role_option, selected_role))
                 elif len(roles) == 1 and roles[0]:
-                    import pdb;pdb.set_trace()
                     data = roles[0].split(',')
                     if data[0] == 'Default' or not data[1]:
                         print("SAMLResponse from Identity Provider does not contain available AWS Account/Role for this user")
