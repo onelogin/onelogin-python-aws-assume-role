@@ -99,7 +99,7 @@ def get_options():
             options.subdomain = config['subdomain']
         if 'username' in config.keys() and config['username'] and not options.username:
             options.username = config['username']
-        if 'profile' in config.keys() and config['profile'] and not options.profile:
+        if 'profile' in config.keys() and config['profile'] and not options.profile_name:
             options.profile_name = config['profile']
         if 'duration' in config.keys() and config['duration'] and not options.duration:
             options.duration = config['duration']
