@@ -7,6 +7,7 @@
 import yaml
 import os
 
+
 def identify_known_accounts(data):
     """
     Given a known list of account IDs from yaml config, append note about their account if they're known to us.
@@ -25,6 +26,7 @@ def identify_known_accounts(data):
     else:
         return ""
 
+
 def pretty_choices(index, role_name, account_id):
     """
     Formats the output of the account option
@@ -32,6 +34,6 @@ def pretty_choices(index, role_name, account_id):
     """
     account_alias = identify_known_accounts(account_id)
     if account_alias:
-        print(" %s | %s (Account: %s - %s)"  % (index, role_name, account_id, account_alias))
+        print(" %s | %s (Account: %s - %s)" % (index, role_name, account_id, account_alias))
     else:
         print(" %s | %s (Account %s)" % (index, role_name, account_id))

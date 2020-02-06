@@ -91,10 +91,10 @@ def get_options():
                         dest="aws_role_name",
                         help="AWS role name to select")
     parser.add_argument("--cache-saml",
-                    dest="cache_saml",
-                    default=False,
-                    help="Store and use cached SAML Response and the Onelogin info to retrieve it.",
-                    action="store_true")
+                        dest="cache_saml",
+                        default=False,
+                        help="Store and use cached SAML Response and the Onelogin info to retrieve it.",
+                        action="store_true")
 
     options = parser.parse_args()
 
@@ -434,7 +434,7 @@ def clean_cache():
     Removes the file that contains the cached data
     """
     if os.path.exists(SAML_CACHE_PATH):
-        remove(SAML_CACHE_PATH)
+        os.remove(SAML_CACHE_PATH)
         print('Cache cleaned.')
 
 
@@ -471,6 +471,7 @@ def append_iterations(iterations):
     iterations.append(iterations[-1] + 1)
     return iterations
 
+
 def main():
     print("\nOneLogin AWS Assume Role Tool\n")
 
@@ -490,7 +491,7 @@ def main():
 
     profile_name = "default"
     if options.profile_name is not None:
-       profile_name = options.profile_name
+        profile_name = options.profile_name
 
     if options.file is None:
         aws_file = os.path.expanduser('~/.aws/credentials')
@@ -558,32 +559,32 @@ def main():
             ask_for_user_again = False
             ask_for_role_again = True
         elif result is None and missing_onelogin_data:
-                # Capture OneLogin Account Details
-                if username_or_email is None:
-                    if options.username:
-                        username_or_email = options.username
-                    else:
-                        print("OneLogin Username: ")
-                        username_or_email = sys.stdin.readline().strip()
-
-                if password is None:
-                    if options.password:
-                        password = options.password
-                    else:
-                        password = getpass.getpass("\nOneLogin Password: ")
-
-                if app_id is None:
-                    if options.app_id:
-                        app_id = options.app_id
-                    else:
-                        print("\nAWS App ID: ")
-                        app_id = sys.stdin.readline().strip()
-
-                if options.subdomain:
-                    onelogin_subdomain = options.subdomain
+            # Capture OneLogin Account Details
+            if username_or_email is None:
+                if options.username:
+                    username_or_email = options.username
                 else:
-                    print("\nOnelogin Instance Sub Domain: ")
-                    onelogin_subdomain = sys.stdin.readline().strip()
+                    print("OneLogin Username: ")
+                    username_or_email = sys.stdin.readline().strip()
+
+            if password is None:
+                if options.password:
+                    password = options.password
+                else:
+                    password = getpass.getpass("\nOneLogin Password: ")
+
+            if app_id is None:
+                if options.app_id:
+                    app_id = options.app_id
+                else:
+                    print("\nAWS App ID: ")
+                    app_id = sys.stdin.readline().strip()
+
+            if options.subdomain:
+                onelogin_subdomain = options.subdomain
+            else:
+                print("\nOnelogin Instance Sub Domain: ")
+                onelogin_subdomain = sys.stdin.readline().strip()
 
         if result is None:
             result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info)
