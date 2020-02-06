@@ -1,16 +1,18 @@
 #!/usr/bin/python
 
+import argparse
 import base64
+import boto3
+import botocore.client
 import getpass
 import json
 import os
 import sys
 import time
-import argparse
 
-import boto3
-import botocore
+from base64 import b64decode
 from botocore.exceptions import ClientError
+from datetime import datetime
 from lxml import etree as ET
 from onelogin.api.client import OneLoginClient
 
@@ -25,6 +27,8 @@ except ImportError:
 MFA_ATTEMPS_FOR_WARNING = 3
 TIME_SLEEP_ON_RESPONSE_PENDING = 15
 MAX_ITER_GET_SAML_RESPONSE = 6
+DEFAULT_AWS_DIR = os.path.expanduser('~/.aws')
+SAML_CACHE_PATH = os.path.join(DEFAULT_AWS_DIR, 'saml_cache.txt')
 
 
 def get_options():
@@ -86,6 +90,11 @@ def get_options():
     parser.add_argument("--aws-role-name",
                         dest="aws_role_name",
                         help="AWS role name to select")
+    parser.add_argument("--cache-saml",
+                    dest="cache_saml",
+                    default=False,
+                    help="Store and use cached SAML Response and the Onelogin info to retrieve it.",
+                    action="store_true")
 
     options = parser.parse_args()
 
@@ -125,13 +134,14 @@ def get_options():
 
     if options.aws_role_name is None and options.aws_account_id or options.aws_role_name and options.aws_account_id is None:
         parser.error("--aws-account-id and --aws-role-name need to be set together")
-
     return options
+
 
 def get_config():
     if os.path.isfile('onelogin.aws.json'):
         json_data = open('onelogin.aws.json').read()
         return json.loads(json_data)
+
 
 def get_client(options):
     client_id = client_secret = ip = None
@@ -374,6 +384,7 @@ def get_duration():
             pass
     return answer
 
+
 def ask_iteration_new_user():
     print("\nDo you want to select a new user?  (y/n)")
     answer = get_yes_or_not()
@@ -381,6 +392,84 @@ def ask_iteration_new_user():
         return True
     else:
         sys.exit()
+
+
+def get_data_from_cache():
+    """
+    Gets the SAML assertion and related user information from cache.
+    Returns:
+        cache_contents (dict): decoded SAML assertion.
+    """
+    if not os.path.exists(SAML_CACHE_PATH):
+        print('Cache file does not exist!')
+        return
+
+    with open(SAML_CACHE_PATH, 'r') as f:
+        cache_contents = json.load(f)
+
+    return cache_contents
+
+
+def write_data_to_cache(contents):
+    """
+    Writes SAML assertion and related user information from OneLogin to a cache file.
+    Arguments:
+        contents (dict): all not confidential information from OneLogin returned after a successful SAML authentication.
+    """
+    print('Writing SAML cache to {saml_cache}'.format(saml_cache=SAML_CACHE_PATH))
+    # Avoid storing password and otp_token
+    if 'password' in contents:
+        del contents['password']
+    if 'mfa_verify_info' in contents and contents['mfa_verify_info'] and 'otp_token' in contents['mfa_verify_info']:
+        del contents['mfa_verify_info']['otp_token']
+
+    if not os.path.exists(DEFAULT_AWS_DIR):
+        os.makedirs(DEFAULT_AWS_DIR)
+    with open(SAML_CACHE_PATH, 'w') as f:
+        json.dump(contents, f)
+
+
+def clean_cache():
+    """
+    Removes the file that contains the cached data
+    """
+    if os.path.exists(SAML_CACHE_PATH):
+        remove(SAML_CACHE_PATH)
+        print('Cache cleaned.')
+
+
+def is_valid_saml_assertion(saml_xml):
+    """
+    Validates that a SAML assertion has not expired by checking the 'NotBefore' and 'NotOnOrAfter' attributes.
+    Arguments:
+        saml_xml (str): SAML assertion XML as a string.
+    Returns:
+        bool: True if assertion is not yet expired, False if it is.
+    """
+    if saml_xml is None:
+        return False
+
+    try:
+        doc = ET.fromstring(saml_xml)
+        conditions = list(doc.iter(tag='{urn:oasis:names:tc:SAML:2.0:assertion}Conditions'))
+        if conditions:
+            not_before_str = conditions[0].get('NotBefore')
+            not_on_or_after_str = conditions[0].get('NotOnOrAfter')
+
+            now = datetime.utcnow()
+            not_before = datetime.strptime(not_before_str, "%Y-%m-%dT%H:%M:%SZ")
+            not_on_or_after = datetime.strptime(not_on_or_after_str, "%Y-%m-%dT%H:%M:%SZ")
+
+            if not_before <= now < not_on_or_after:
+                return True
+        return False
+    except Exception as e:
+        return False
+
+
+def append_iterations(iterations):
+    iterations.append(iterations[-1] + 1)
+    return iterations
 
 def main():
     print("\nOneLogin AWS Assume Role Tool\n")
@@ -399,6 +488,15 @@ def main():
     if hasattr(client, 'ip'):
         ip = client.ip
 
+    profile_name = "default"
+    if options.profile_name is not None:
+       profile_name = options.profile_name
+
+    if options.file is None:
+        aws_file = os.path.expanduser('~/.aws/credentials')
+    else:
+        aws_file = options.file
+
     config_file_writer = None
     botocore_config = botocore.client.Config(signature_version=botocore.UNSIGNED)
     ask_for_user_again = False
@@ -406,10 +504,51 @@ def main():
     sleep = False
     iterations = list(range(0, options.loop))
     duration = options.duration
+    username_or_email = password = app_id = onelogin_subdomain = None
+    result = None
+
     for i in iterations:
         if sleep:
             time.sleep(options.time * 60)
             sleep = False
+
+            if result is not None and not is_valid_saml_assertion(b64decode(result['saml_response'])):
+                result = None
+
+        if options.cache_saml:
+            cached_data = get_data_from_cache()
+            if cached_data:
+                if is_valid_saml_assertion(b64decode(cached_data['saml_response'])):
+                    print("Found a valid SAML cache for the user %s" % cached_data['username_or_email'])
+                    result = cached_data
+
+                    username_or_email = result['username_or_email']
+                    onelogin_subdomain = result['onelogin_subdomain']
+                    mfa_verify_info = result['mfa_verify_info']
+                    app_id = result['app_id']
+                else:
+                    print("The cached SAML expired for the user %s" % cached_data['username_or_email'])
+                    if i == 0:
+                        print("Reuse rest of the data?  (y/n)")
+                        answer = get_yes_or_not()
+                        if answer == 'y':
+                            username_or_email = cached_data['username_or_email']
+                            onelogin_subdomain = cached_data['onelogin_subdomain']
+                            mfa_verify_info = cached_data['mfa_verify_info']
+                            app_id = cached_data['app_id']
+                        else:
+                            clean_cache()
+
+        # Allow user set a new profile name when switching from User or Role
+        if ask_for_user_again or ask_for_role_again:
+            if not (options.profile_name is None and options.file is None):
+                print("Do you want to set a new profile name?  (y/n)")
+                answer = get_yes_or_not()
+                if answer == 'y':
+                    print("Profile name: ")
+                    profile_name = sys.stdin.readline().strip()
+
+        missing_onelogin_data = username_or_email is None or password is None or app_id is None or onelogin_subdomain is None
 
         if ask_for_user_again:
             print("OneLogin Username: ")
@@ -418,24 +557,27 @@ def main():
             password = getpass.getpass("\nOneLogin Password: ")
             ask_for_user_again = False
             ask_for_role_again = True
-        elif i == 0:
+        elif result is None and missing_onelogin_data:
                 # Capture OneLogin Account Details
-                if options.username:
-                    username_or_email = options.username
-                else:
-                    print("OneLogin Username: ")
-                    username_or_email = sys.stdin.readline().strip()
+                if username_or_email is None:
+                    if options.username:
+                        username_or_email = options.username
+                    else:
+                        print("OneLogin Username: ")
+                        username_or_email = sys.stdin.readline().strip()
 
-                if options.password:
-                    password = options.password
-                else:
-                    password = getpass.getpass("\nOneLogin Password: ")
+                if password is None:
+                    if options.password:
+                        password = options.password
+                    else:
+                        password = getpass.getpass("\nOneLogin Password: ")
 
-                if options.app_id:
-                    app_id = options.app_id
-                else:
-                    print("\nAWS App ID: ")
-                    app_id = sys.stdin.readline().strip()
+                if app_id is None:
+                    if options.app_id:
+                        app_id = options.app_id
+                    else:
+                        print("\nAWS App ID: ")
+                        app_id = sys.stdin.readline().strip()
 
                 if options.subdomain:
                     onelogin_subdomain = options.subdomain
@@ -443,13 +585,19 @@ def main():
                     print("\nOnelogin Instance Sub Domain: ")
                     onelogin_subdomain = sys.stdin.readline().strip()
 
-        result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info)
+        if result is None:
+            result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info)
 
-        mfa_verify_info = result['mfa_verify_info']
+            username_or_email = result['username_or_email']
+            password = result['password']
+            onelogin_subdomain = result['onelogin_subdomain']
+            mfa_verify_info = result['mfa_verify_info']
+
+            if options.cache_saml:
+                cached_content = result
+                cached_content['app_id'] = app_id
+                write_data_to_cache(cached_content)
         saml_response = result['saml_response']
-        username_or_email = result['username_or_email']
-        password = result['password']
-        onelogin_subdomain = result['onelogin_subdomain']
 
         if i == 0 or ask_for_role_again:
             if ask_for_role_again:
@@ -460,7 +608,8 @@ def main():
                 print("SAMLResponse from Identity Provider does not contain AWS Role info")
                 if ask_iteration_new_user():
                     ask_for_user_again = True
-                    iterations.append(iterations[-1]+1)
+                    result = None
+                    iterations = append_iterations(iterations)
                     continue
             else:
                 roles = attributes['https://aws.amazon.com/SAML/Attributes/Role']
@@ -485,7 +634,7 @@ def main():
 
                     role_option = None
                     if options.aws_account_id and options.aws_role_name and options.aws_account_id in roles_by_app:
-                        role_option = next((index for index,role_name in roles_by_app[options.aws_account_id] if role_name == options.aws_role_name), None)
+                        role_option = next((index for index, role_name in roles_by_app[options.aws_account_id] if role_name == options.aws_role_name), None)
 
                     if role_option is None:
                         if options.aws_account_id and options.aws_role_name:
@@ -501,7 +650,8 @@ def main():
                         print("SAMLResponse from Identity Provider does not contain available AWS Account/Role for this user")
                         if ask_iteration_new_user():
                             ask_for_user_again = True
-                            iterations.append(iterations[-1]+1)
+                            result = None
+                            iterations = append_iterations(iterations)
                             continue
                     else:
                         selected_role = roles[0]
@@ -510,7 +660,8 @@ def main():
                     print("SAMLResponse from Identity Provider does not contain available AWS Role for this user")
                     if ask_iteration_new_user():
                         ask_for_user_again = True
-                        iterations.append(iterations[-1]+1)
+                        result = None
+                        iterations = append_iterations(iterations)
                         continue
 
                 selected_role_data = selected_role.split(',')
@@ -534,7 +685,8 @@ def main():
                 print("Missing/Invalid selected AWS Role or Account")
                 if ask_iteration_new_user():
                     ask_for_user_again = True
-                    iterations.append(iterations[-1]+1)
+                    result = None
+                    iterations = append_iterations(iterations)
                     continue
             aws_session_token = conn.assume_role_with_saml(
                 RoleArn=role_arn,
@@ -552,23 +704,30 @@ def main():
                'An error occurred (ExpiredTokenException) when calling the AssumeRoleWithSAML operation' in error_msg:
                 print(error_msg)
                 print("Generating a new SAMLResponse with the data already provided....")
-                iterations.append(iterations[-1]+1)
+                result = None
+                iterations = append_iterations(iterations)
+                ask_for_user_again = False
+                ask_for_role_again = False
                 continue
             elif "The requested DurationSeconds exceeds the MaxSessionDuration set for this role." in error_msg:
                 print(error_msg)
                 print("Introduce a new value, to be used on this Role, for DurationSeconds between 900 and 43200. Previously was %s" % duration)
                 duration = get_duration()
-                iterations.append(iterations[-1]+1)
+                iterations = append_iterations(iterations)
+                ask_for_user_again = False
+                ask_for_role_again = False
                 continue
             elif "Not authorized to perform sts:AssumeRoleWithSAML" in error_msg:
                 print(error_msg)
-                ask_for_role_again = True
-                iterations.append(iterations[-1]+1)
+                ask_for_user_again = True
+                result = None
+                iterations = append_iterations(iterations)
                 continue
             elif "Request ARN is invalid" in error_msg:
                 print(error_msg)
+                ask_for_user_again = False
                 ask_for_role_again = True
-                iterations.append(iterations[-1]+1)
+                iterations = append_iterations(iterations)
                 continue
             else:
                 raise err
@@ -608,31 +767,33 @@ def main():
                 config_file_writer = ConfigFileWriter()
 
             updated_config = {
-                '__section__': options.profile_name,
+                '__section__': profile_name,
                 'aws_access_key_id': access_key_id,
                 'aws_secret_access_key': secret_access_key,
                 'aws_session_token': session_token,
                 'aws_session_expiration': session_expiration,
                 'aws_security_token': security_token
             }
-            config_file_writer.update_config(updated_config, options.file)
+            config_file_writer.update_config(updated_config, aws_file)
 
             print("Success!\n")
             print("Temporary AWS Credentials Granted via OneLogin\n")
-            print("Updated AWS profile '%s' located at %s" % (options.profile_name, options.file))
+            print("Updated AWS profile '%s' located at %s" % (profile_name, aws_file))
 
         if options.interactive:
             print("\n\nThe process regenerated credentials for user %s with AWS Role %s " % (username_or_email, selected_role))
             print("Do you want to execute now the process for the same user but with other AWS Role?  (y/n)")
             answer = get_yes_or_not()
             if answer == 'y':
+                ask_for_user_again = False
                 ask_for_role_again = True
-                iterations.append(iterations[-1]+1)
+                iterations = append_iterations(iterations)
                 continue
             else:
                 print("Do you want to execute now the process for other user?  (y/n)")
                 ask_for_user_again = True
-                iterations.append(iterations[-1]+1)
+                result = None
+                iterations = append_iterations(iterations)
                 continue
 
         if i < len(iterations) - 1:

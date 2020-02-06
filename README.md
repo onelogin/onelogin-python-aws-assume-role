@@ -230,6 +230,8 @@ You can also make it interactive, with the `-x` or `--interactive`option, and at
 
 The selection of the AWS account and Role can be also be done with the --aws-account-id and --aws-role-name parameters.
 
+If you plan to execute the script several times over different Accounts/Roles of the user and you want to cache the SAMLResponse, set the --cache-saml option
+
 For more info execute:
 
 ```sh
