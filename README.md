@@ -71,19 +71,27 @@ Is a json file named onelogin.sdk.json as follows:
 
 ```json
 {
+  "app_id": "",
   "client_id": "",
   "client_secret": "",
+  "ip": "",
+  "profile": "",
   "region": "",
-  "ip": ""
+  "subdomain": "",
+  "username": ""
 }
 ```
 
 Where:
 
+ * app_id Onelogin AWS integration app id
  * client_id  Onelogin OAuth2 client ID
  * client_secret  Onelogin OAuth2 client secret
  * region  Indicates where the instance is hosted. Possible values: 'us' or 'eu'.
  * ip  Indicates the IP to be used on the method to retrieve the SAMLResponse in order to bypass MFA if that IP was previously whitelisted.
+ * profile The AWS profile to use in ~/.aws/credentials
+ * subdomain Needs to be set to the correct subdomain for your Onelogin integration
+ * username The email address that is used to authenticate against Onelogin
 
 For security reasons, IP only can be provided at the onelogin.sdk.json.
 On a shared machine where multiple users has access, That file should only be readable by the root of the machine that also controls the
@@ -96,10 +104,6 @@ There is an optional file onelogin.aws.json, that can be used if you plan to exe
 
 ```json
 {
-  "app_id": "",
-  "subdomain": "",
-  "username": "",
-  "profile": "",
   "duration": "",
   "aws_region": "",
   "aws_account_id": "",
@@ -109,10 +113,6 @@ There is an optional file onelogin.aws.json, that can be used if you plan to exe
 
 Where:
 
- * app_id Onelogin AWS integration app id
- * subdomain Needs to be set to the correct subdomain for your AWS integration
- * username The email address that is used to authenticate against Onelogin
- * profile The AWS profile to use in ~/.aws/credentials
  * duration Desired AWS Credential Duration
  * aws_region AWS region to use
  * aws_account_id AWS account id to be used

@@ -1,6 +1,10 @@
 {
+  "app_id": "",
   "client_id": "",
   "client_secret": "",
+  "ip": "",
+  "profile": "",
   "region": "",
-  "ip": ""
+  "subdomain": "",
+  "username": ""
 }
