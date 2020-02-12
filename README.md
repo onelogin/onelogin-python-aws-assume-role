@@ -90,7 +90,7 @@ Where:
  * region  Indicates where the instance is hosted. Possible values: 'us' or 'eu'.
  * ip  Indicates the IP to be used on the method to retrieve the SAMLResponse in order to bypass MFA if that IP was previously whitelisted.
  * profile The AWS profile to use in ~/.aws/credentials
- * subdomain Needs to be set to the correct subdomain for your Onelogin integration
+ * subdomain Needs to be set to the correct subdomain for your Onelogin AWS integration
  * username The email address that is used to authenticate against Onelogin
 
 For security reasons, IP only can be provided at the onelogin.sdk.json.
