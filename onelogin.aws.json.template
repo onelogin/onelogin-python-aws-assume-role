@@ -6,5 +6,15 @@
   "duration": "",
   "aws_region": "",
   "aws_account_id": "",
-  "aws_role_name": ""
+  "aws_role_name": "",
+  "profiles": {
+    "profile-1": {
+      "aws_account_id": "",
+      "aws_role_name": "",
+      "aws_region": ""
+    },
+    "profile-2": {
+      "aws_account_id": ""
+    }
+  }
 }
