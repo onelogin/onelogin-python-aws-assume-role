@@ -100,7 +100,7 @@ There is an optional file onelogin.aws.json, that can be used if you plan to exe
   "subdomain": "",
   "username": "",
   "profile": "",
-  "duration": "",
+  "duration": 3600,
   "aws_region": "",
   "aws_account_id": "",
   "aws_role_name": ""
@@ -113,7 +113,7 @@ Where:
  * subdomain Needs to be set to the correct subdomain for your AWS integration
  * username The email address that is used to authenticate against Onelogin
  * profile The AWS profile to use in ~/.aws/credentials
- * duration Desired AWS Credential Duration
+ * duration Desired AWS Credential Duration in seconds. Default: 3600, Min: 900, Max: 43200
  * aws_region AWS region to use
  * aws_account_id AWS account id to be used
  * aws_role_name AWS role name to select

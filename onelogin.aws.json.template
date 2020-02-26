@@ -3,7 +3,7 @@
   "subdomain": "",
   "username": "",
   "profile": "",
-  "duration": "",
+  "duration": 3600,
   "aws_region": "",
   "aws_account_id": "",
   "aws_role_name": ""
