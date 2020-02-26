@@ -103,7 +103,16 @@ There is an optional file onelogin.aws.json, that can be used if you plan to exe
   "duration": "",
   "aws_region": "",
   "aws_account_id": "",
-  "aws_role_name": ""
+  "aws_role_name": "",
+  "profiles": {
+    "profile-1": {
+      "aws_account_id": "",
+      "aws_role_name": ""
+    },
+    "profile-2": {
+      "aws_account_id": ""
+    }
+  }
 }
 ```
 
@@ -117,6 +126,7 @@ Where:
  * aws_region AWS region to use
  * aws_account_id AWS account id to be used
  * aws_role_name AWS role name to select
+ * profiles Contains a list of profile->account id, and optionally role name mappings. If this attribute is populated `aws_account_id` and `aws_role_name` will be set based on the `profile` provided when running the script.
 
 The values provided on the command line will have preference
 over the values defined on this file.
