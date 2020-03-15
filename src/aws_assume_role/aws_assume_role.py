@@ -118,6 +118,14 @@ def get_options():
             options.aws_account_id = config['aws_account_id']
         if 'aws_role_name' in config.keys() and config['aws_role_name'] and not options.aws_role_name:
             options.aws_role_name = config['aws_role_name']
+        if 'profiles' in config.keys() and config['profiles'] and options.profile_name and options.profile_name in config['profiles'].keys():
+            profile = config['profiles'][options.profile_name]
+            if 'aws_account_id' in profile.keys() and profile['aws_account_id'] and not options.aws_account_id:
+                options.aws_account_id = profile['aws_account_id']
+            if 'aws_role_name' in profile.keys() and profile['aws_role_name'] and not options.aws_role_name:
+                options.aws_role_name = profile['aws_role_name']
+            if 'aws_region' in profile.keys() and profile['aws_region'] and not options.aws_region:
+                options.aws_region = profile['aws_region']
 
     options.time = options.time
     if options.time < 15:
@@ -132,8 +140,6 @@ def get_options():
     elif options.duration > 43200:
         options.duration = 43200
 
-    if options.aws_role_name is None and options.aws_account_id or options.aws_role_name and options.aws_account_id is None:
-        parser.error("--aws-account-id and --aws-role-name need to be set together")
     return options
 
 
@@ -636,6 +642,8 @@ def main():
                     role_option = None
                     if options.aws_account_id and options.aws_role_name and options.aws_account_id in roles_by_app:
                         role_option = next((index for index, role_name in roles_by_app[options.aws_account_id] if role_name == options.aws_role_name), None)
+                    elif options.aws_account_id and options.aws_role_name is None and len(roles_by_app[options.aws_account_id]) == 1:
+                        role_option = next((index for index, role_name in roles_by_app[options.aws_account_id]), None)
 
                     if role_option is None:
                         if options.aws_account_id and options.aws_role_name:
