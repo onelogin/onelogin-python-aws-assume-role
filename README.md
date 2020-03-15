@@ -253,7 +253,7 @@ You can also make it regenerate and update the credentials file by using the `--
 
 You can also make it interactive, with the `-x` or `--interactive`option, and at the end of the iteration, you will be asked if want to generate new credentials for a new user or a new role.
 
-The selection of the AWS account and Role can be also be done with the --aws-account-id and --aws-role-name parameters.
+The selection of the AWS account and Role can be also be done with the `--aws-account-id` and `--aws-role-name` parameters. If both parameters are set then both will be matched against the list of available accounts and roles. If only `--aws-account-id` is specified and you only have one available role in that account, then that role will be chosen by default. If you have more than one role in the given account then you will need to select the appropriate one as per normal.
 
 If you plan to execute the script several times over different Accounts/Roles of the user and you want to cache the SAMLResponse, set the --cache-saml option
 

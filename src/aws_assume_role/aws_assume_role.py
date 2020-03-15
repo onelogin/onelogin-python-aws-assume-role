@@ -140,8 +140,6 @@ def get_options():
     elif options.duration > 43200:
         options.duration = 43200
 
-    if options.aws_role_name is None and options.aws_account_id or options.aws_role_name and options.aws_account_id is None:
-        parser.error("--aws-account-id and --aws-role-name need to be set together")
     return options
 
 
@@ -644,6 +642,8 @@ def main():
                     role_option = None
                     if options.aws_account_id and options.aws_role_name and options.aws_account_id in roles_by_app:
                         role_option = next((index for index, role_name in roles_by_app[options.aws_account_id] if role_name == options.aws_role_name), None)
+                    elif options.aws_account_id and options.aws_role_name is None and len(roles_by_app[options.aws_account_id]) == 1:
+                        role_option = next((index for index, role_name in roles_by_app[options.aws_account_id]), None)
 
                     if role_option is None:
                         if options.aws_account_id and options.aws_role_name:
