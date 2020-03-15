@@ -67,7 +67,7 @@ python setup.py install
 
 The python script uses a settings file, where [OneLogin SDK properties](https://github.com/onelogin/onelogin-python-sdk#getting-started) are placed.
 
-Is a json file named onelogin.sdk.json as follows:
+Is a json file named `onelogin.sdk.json` as follows:
 
 ```json
 {
@@ -85,14 +85,14 @@ Where:
  * region  Indicates where the instance is hosted. Possible values: 'us' or 'eu'.
  * ip  Indicates the IP to be used on the method to retrieve the SAMLResponse in order to bypass MFA if that IP was previously whitelisted.
 
-For security reasons, IP only can be provided at the onelogin.sdk.json.
+For security reasons, IP only can be provided in `onelogin.sdk.json`.
 On a shared machine where multiple users has access, That file should only be readable by the root of the machine that also controls the
 client_id / client_secret, and not by an end user, to prevent him manipulate the IP value.
 
 Place the file in the same path where the python script is invoked.
 
 
-There is an optional file onelogin.aws.json, that can be used if you plan to execute the script with some fixed values and avoid providing it on the command line each time.
+There is an optional file `onelogin.aws.json`, that can be used if you plan to execute the script with some fixed values and avoid providing it on the command line each time.
 
 ```json
 {
@@ -100,7 +100,7 @@ There is an optional file onelogin.aws.json, that can be used if you plan to exe
   "subdomain": "",
   "username": "",
   "profile": "",
-  "duration": "",
+  "duration": 3600,
   "aws_region": "",
   "aws_account_id": "",
   "aws_role_name": "",
@@ -123,7 +123,7 @@ Where:
  * subdomain Needs to be set to the correct subdomain for your AWS integration
  * username The email address that is used to authenticate against Onelogin
  * profile The AWS profile to use in ~/.aws/credentials
- * duration Desired AWS Credential Duration
+ * duration Desired AWS Credential Duration in seconds. Default: 3600, Min: 900, Max: 43200
  * aws_region AWS region to use
  * aws_account_id AWS account id to be used
  * aws_role_name AWS role name to select
@@ -233,7 +233,7 @@ to install dependencies.
 
 ### Usage
 
-Assuming you have your AWS Multi Account app set up correctly and you’re using valid OneLogin API credentials stored on the onelogin.sdk.json placed at the root of the repository, using this tool is as simple as following the prompts.
+Assuming you have your AWS Multi Account app set up correctly and you’re using valid OneLogin API credentials stored on the `onelogin.sdk.json` placed at the root of the repository, using this tool is as simple as following the prompts.
 
 ```sh
 > onelogin-aws-assume-role
