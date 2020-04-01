@@ -37,7 +37,7 @@ setup(
     package_data={'': ['accounts.yaml','onelogin.sdk.json']},
     install_requires=[
         'boto3>=1.7.84',
-        'onelogin>=1.5.0',
+        'onelogin>=1.9.0',
         'pyyaml>=5.1.2',
         'lxml'
     ],
@@ -47,11 +47,10 @@ setup(
     test_suite='tests',
     extras_require={
         'test': (
-            'coverage==3.7.1',
-            'pylint==1.3.1',
-            'pep8==1.5.7',
-            'pyflakes==0.8.1',
-            'coveralls==0.4.4',
+            'coverage>=3,<6',
+            'pylint>=1,<3',
+            'pep8>=1,<2',
+            'pyflakes>=1,<3',
         ),
     },
     keywords='onelogin aws-assume-role',)
