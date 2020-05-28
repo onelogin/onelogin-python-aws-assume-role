@@ -18,10 +18,10 @@ from onelogin.api.client import OneLoginClient
 
 try:
     from aws_assume_role.writer import ConfigFileWriter
-    from aws_assume_role.accounts import pretty_choices
+    from aws_assume_role.accounts import get_account_aliases_info, pretty_choices
 except ImportError:
     from writer import ConfigFileWriter
-    from accounts import pretty_choices
+    from accounts import get_account_aliases_info, pretty_choices
 
 
 MFA_ATTEMPS_FOR_WARNING = 3
@@ -626,12 +626,13 @@ def main():
                     print("\nAvailable AWS Roles")
                     print("-----------------------------------------------------------------------")
                     roles_by_app = {}
+                    account_aliases = get_account_aliases_info()
                     for index, role in enumerate(roles):
                         role_info = role.split(",")[0].split(":")
                         account_id = role_info[4]
                         role_name = role_info[5].replace("role/", "")
 
-                        pretty_choices(index, role_name, account_id)
+                        pretty_choices(index, role_name, account_id, account_aliases)
 
                         if account_id in roles_by_app:
                             roles_by_app[account_id].append((index, role_name))
