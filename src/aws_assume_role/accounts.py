@@ -32,28 +32,57 @@ def identify_known_accounts(account_aliases, account_id):
         return ""
 
 
-def pretty_choices(index, role_name, account_id, account_aliases=[]):
+def pretty_choices(index, role_name, account_id, account_aliases=[], mark=""):
     """
     Formats the output of the account option
     :return: formatted print
     """
     account_alias = identify_known_accounts(account_aliases, account_id)
     if account_alias:
-        print(" %s | %s (Account: %s - %s)" % (index, role_name, account_id, account_alias))
+        print(" %s | %s (Account: %s - %s)%s" % (index, role_name, account_id, account_alias, mark))
     else:
-        print(" %s | %s (Account %s)" % (index, role_name, account_id))
+        print(" %s | %s (Account %s)%s" % (index, role_name, account_id, mark))
 
-def process_account_and_role_choices(roles_by_account):
-    new_roles_by_account = {}
+def process_account_and_role_choices(info_indexed_by_account, info_indexed_by_roles, options):
+    role_option = None
+    selection_info = []
     index = 0
-    if roles_by_account:
+    if info_indexed_by_account:
         account_aliases = get_account_aliases_info()
-        for account_id, role_names in sorted(roles_by_account.items()):
-            new_roles_by_account[account_id] = []
-            for role_name in sorted(role_names):
-                new_roles_by_account[account_id].append((index, role_name))
-                pretty_choices(index, role_name, account_id, account_aliases)
-                index = index + 1
-    return new_roles_by_account
+        # Order by role name
+        if len(info_indexed_by_roles) > 0:
+            for role_name, account_ids in sorted(info_indexed_by_roles.items()):                
+                for account_id, role_string in sorted(account_ids.items()):
+                    selection_info.append(role_string)
+                    mark, found = check_info(account_id, role_name, options.aws_account_id, options.aws_role_name)
+                    if found:
+                        role_option = index
+                    pretty_choices(index, role_name, account_id, account_aliases, mark)
+                    index = index + 1
+        else:
+            for account_id, role_names in sorted(info_indexed_by_account.items()):
+                for role_name, role_string in sorted(role_names.items()):
+                    selection_info.append(role_string)
+                    mark, found = check_info(account_id, role_name, options.aws_account_id, options.aws_role_name)
+                    if found:
+                        role_option = index
+                    pretty_choices(index, role_name, account_id, account_aliases, mark)
+                    index = index + 1
+
+    return selection_info, role_option
+
+def check_info(account_id, role_name, config_account_id, config_role_name):
+    mark = ""
+    found = False
+    if account_id == config_account_id and role_name == config_role_name:
+        mark = " **"
+        found = True
+    elif account_id == config_account_id:
+            mark = " *"
+    elif role_name == config_role_name:
+            mark = " *"
+    return mark, found
+
+
 
     

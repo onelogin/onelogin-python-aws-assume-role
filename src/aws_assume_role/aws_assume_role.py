@@ -95,6 +95,11 @@ def get_options():
                         default=False,
                         help="Store and use cached SAML Response and the Onelogin info to retrieve it.",
                         action="store_true")
+    parser.add_argument("--role_order",
+                        dest="role_order",
+                        default=False,
+                        help="By default in order to select Account/Role, the list will be ordered by account ids. Enable this to list by role name instead.",
+                        action="store_true")
 
     options = parser.parse_args()
 
@@ -626,26 +631,26 @@ def main():
                 if len(roles) > 1:
                     print("\nAvailable AWS Roles")
                     print("-----------------------------------------------------------------------")
-                    roles_by_account = {}
-                    for index, role in enumerate(roles):
+                    info_indexed_by_account = {}
+                    info_indexed_by_roles = {}
+
+                    for role in roles:
                         role_info = role.split(",")[0].split(":")
                         account_id = role_info[4]
                         role_name = role_info[5].replace("role/", "")
 
-                        if account_id in roles_by_account:
-                            roles_by_account[account_id].append(role_name)
-                        else:
-                            roles_by_account[account_id] = [role_name]
+                        if account_id not in info_indexed_by_account:
+                            info_indexed_by_account[account_id] = {}
+                        info_indexed_by_account[account_id][role_name] = role
+                        
+                        if options.role_order:
+                            if role_name not in info_indexed_by_roles:
+                                info_indexed_by_roles[role_name] = {}
+                            info_indexed_by_roles[role_name][account_id] = role
 
-                    roles_by_account = process_account_and_role_choices(roles_by_account)
+                    selection_info, role_option = process_account_and_role_choices(info_indexed_by_account, info_indexed_by_roles, options)
 
                     print("-----------------------------------------------------------------------")
-
-                    role_option = None
-                    if options.aws_account_id and options.aws_role_name and options.aws_account_id in roles_by_account:
-                        role_option = next((index for index, role_name in roles_by_account[options.aws_account_id] if role_name == options.aws_role_name), None)
-                    elif options.aws_account_id and options.aws_role_name is None and len(roles_by_account[options.aws_account_id]) == 1:
-                        role_option = next((index for index, role_name in roles_by_account[options.aws_account_id]), None)
 
                     if role_option is None:
                         if options.aws_account_id and options.aws_role_name:
@@ -653,7 +658,7 @@ def main():
                         print("Select the desired AWS Role [0-%s]: " % (len(roles) - 1))
                         role_option = get_selection(len(roles))
 
-                    selected_role = roles[role_option]
+                    selected_role = selection_info[role_option]
                     print("Option %s selected, AWS Role: %s" % (role_option, selected_role))
                 elif len(roles) == 1 and roles[0]:
                     data = roles[0].split(',')

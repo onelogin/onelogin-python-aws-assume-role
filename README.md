@@ -257,6 +257,8 @@ The selection of the AWS account and Role can be also be done with the `--aws-ac
 
 If you plan to execute the script several times over different Accounts/Roles of the user and you want to cache the SAMLResponse, set the --cache-saml option
 
+By default in order to select Account/Role, the list will be ordered by account ids. Enable the --role_order option to list by role name instead.
+
 For more info execute:
 
 ```sh
