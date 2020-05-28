@@ -22,8 +22,8 @@ def identify_known_accounts(account_aliases, account_id):
     """
     # If the accounts custom aliases yaml file does not exist just default to normal behavior
     if account_aliases:
-        if 'accounts' in contents.keys():
-            accounts = contents["accounts"]
+        if 'accounts' in account_aliases.keys():
+            accounts = account_aliases["accounts"]
             for acct in accounts.keys():
                 if acct == account_id:
                     return accounts[acct]
@@ -42,3 +42,18 @@ def pretty_choices(index, role_name, account_id, account_aliases=[]):
         print(" %s | %s (Account: %s - %s)" % (index, role_name, account_id, account_alias))
     else:
         print(" %s | %s (Account %s)" % (index, role_name, account_id))
+
+def process_account_and_role_choices(roles_by_account):
+    new_roles_by_account = {}
+    index = 0
+    if roles_by_account:
+        account_aliases = get_account_aliases_info()
+        for account_id, role_names in sorted(roles_by_account.items()):
+            new_roles_by_account[account_id] = []
+            for role_name in sorted(role_names):
+                new_roles_by_account[account_id].append((index, role_name))
+                pretty_choices(index, role_name, account_id, account_aliases)
+                index = index + 1
+    return new_roles_by_account
+
+    

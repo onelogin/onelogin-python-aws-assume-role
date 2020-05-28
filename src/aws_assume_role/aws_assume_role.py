@@ -18,10 +18,10 @@ from onelogin.api.client import OneLoginClient
 
 try:
     from aws_assume_role.writer import ConfigFileWriter
-    from aws_assume_role.accounts import get_account_aliases_info, pretty_choices
+    from aws_assume_role.accounts import process_account_and_role_choices
 except ImportError:
     from writer import ConfigFileWriter
-    from accounts import get_account_aliases_info, pretty_choices
+    from accounts import process_account_and_role_choices
 
 
 MFA_ATTEMPS_FOR_WARNING = 3
@@ -604,6 +604,7 @@ def main():
                 cached_content = result
                 cached_content['app_id'] = app_id
                 write_data_to_cache(cached_content)
+
         saml_response = result['saml_response']
 
         if i == 0 or ask_for_role_again:
@@ -625,26 +626,26 @@ def main():
                 if len(roles) > 1:
                     print("\nAvailable AWS Roles")
                     print("-----------------------------------------------------------------------")
-                    roles_by_app = {}
-                    account_aliases = get_account_aliases_info()
+                    roles_by_account = {}
                     for index, role in enumerate(roles):
                         role_info = role.split(",")[0].split(":")
                         account_id = role_info[4]
                         role_name = role_info[5].replace("role/", "")
 
-                        pretty_choices(index, role_name, account_id, account_aliases)
-
-                        if account_id in roles_by_app:
-                            roles_by_app[account_id].append((index, role_name))
+                        if account_id in roles_by_account:
+                            roles_by_account[account_id].append(role_name)
                         else:
-                            roles_by_app[account_id] = [(index, role_name)]
+                            roles_by_account[account_id] = [role_name]
+
+                    roles_by_account = process_account_and_role_choices(roles_by_account)
+
                     print("-----------------------------------------------------------------------")
 
                     role_option = None
-                    if options.aws_account_id and options.aws_role_name and options.aws_account_id in roles_by_app:
-                        role_option = next((index for index, role_name in roles_by_app[options.aws_account_id] if role_name == options.aws_role_name), None)
-                    elif options.aws_account_id and options.aws_role_name is None and len(roles_by_app[options.aws_account_id]) == 1:
-                        role_option = next((index for index, role_name in roles_by_app[options.aws_account_id]), None)
+                    if options.aws_account_id and options.aws_role_name and options.aws_account_id in roles_by_account:
+                        role_option = next((index for index, role_name in roles_by_account[options.aws_account_id] if role_name == options.aws_role_name), None)
+                    elif options.aws_account_id and options.aws_role_name is None and len(roles_by_account[options.aws_account_id]) == 1:
+                        role_option = next((index for index, role_name in roles_by_account[options.aws_account_id]), None)
 
                     if role_option is None:
                         if options.aws_account_id and options.aws_role_name:
