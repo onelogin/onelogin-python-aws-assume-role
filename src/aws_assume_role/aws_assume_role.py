@@ -765,6 +765,7 @@ def main():
             print("%s AWS_SECRET_ACCESS_KEY=%s\n" % (action, secret_access_key))
             print("%s AWS_SESSION_EXPIRATION=%s\n" % (action, session_expiration))
             print("%s AWS_SECURITY_TOKEN=%s\n" % (action, security_token))
+            print("%s AWS_REGION=%s\n" % (action, aws_region))
         else:
             if options.file is None:
                 options.file = os.path.expanduser('~/.aws/credentials')
@@ -781,7 +782,8 @@ def main():
                 'aws_secret_access_key': secret_access_key,
                 'aws_session_token': session_token,
                 'aws_session_expiration': session_expiration,
-                'aws_security_token': security_token
+                'aws_security_token': security_token,
+                'region': aws_region
             }
             config_file_writer.update_config(updated_config, aws_file)
 
