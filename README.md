@@ -220,7 +220,7 @@ Activate then the environment
 Then run
 
 ```sh
-> python setup install
+> python setup.py install
 ```
 
 or
