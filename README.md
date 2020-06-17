@@ -201,7 +201,7 @@ A temporal AWS AccessKey and secretKey are retrieved in addition to a sessionTok
 Those data can be used to generate an AWS BasicSessionCredentials to be used in any AWS API SDK.
 
 
-## Quick Start using the python scrypt
+## Quick Start using the python script
 
 ### Prepare the environment
 
@@ -220,7 +220,7 @@ Activate then the environment
 Then run
 
 ```sh
-> python setup install
+> python setup.py install
 ```
 
 or
