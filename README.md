@@ -71,10 +71,10 @@ Is a json file named `onelogin.sdk.json` as follows:
 
 ```json
 {
-  "client_id": "",
-  "client_secret": "",
-  "region": "",
-  "ip": ""
+  "client_id": "XXXXX",
+  "client_secret": "XXXXX",
+  "ip": "",
+  "region": "us"
 }
 ```
 
@@ -96,22 +96,19 @@ There is an optional file `onelogin.aws.json`, that can be used if you plan to e
 
 ```json
 {
-  "app_id": "",
-  "subdomain": "",
-  "username": "",
-  "profile": "",
-  "duration": 3600,
-  "aws_region": "",
+  "app_id": "123456",
+  "subdomain": "mydomain",
+  "username": "user.name@mydomain",
+  "profile": "saml",
+  "duration": 28800,
+  "aws_region": "us-west-2",
   "aws_account_id": "",
   "aws_role_name": "",
   "profiles": {
-    "profile-1": {
+    "saml": {
       "aws_account_id": "",
       "aws_role_name": "",
-      "aws_region": ""
-    },
-    "profile-2": {
-      "aws_account_id": ""
+      "aws_region": "us-west-2"
     }
   }
 }
@@ -124,9 +121,6 @@ Where:
  * username The email address that is used to authenticate against Onelogin
  * profile The AWS profile to use in ~/.aws/credentials
  * duration Desired AWS Credential Duration in seconds. Default: 3600, Min: 900, Max: 43200
- * aws_region AWS region to use
- * aws_account_id AWS account id to be used
- * aws_role_name AWS role name to select
  * profiles Contains a list of profile->account id, and optionally role name mappings. If this attribute is populated `aws_account_id`, `aws_role_name` and `aws_region` will be set based on the `profile` provided when running the script.
 
 **Note**: The values provided on the command line will take precedence over the values defined on this file and, values defined at the _global_ scope in the file, will take precedence over values defined at the `profiles` level. IN addition, each attribute is treating individually, so be aware that this may lead to somewhat strange behaviour when overriding a subset of parameters, when others are defined at a _lower level_ and not overriden. For example, if you had a `onelogin.aws.json` config file as follows:
@@ -142,7 +136,7 @@ Where:
     }
   }
 }
-````
+```
 
 And, you you subsequently ran the application with the command line arguments `--profile my-account --aws-acccount-id 22222222` then the application would ultimately attempt to log in with the role `Administrator` on account `22222222`, with region set to `eu-east-1` and, if successful, save the credentials to profile `my-account`. 
 
