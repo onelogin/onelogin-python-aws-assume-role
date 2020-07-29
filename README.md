@@ -67,18 +67,14 @@ python setup.py install
 
 The python script uses a settings file, where [OneLogin SDK properties](https://github.com/onelogin/onelogin-python-sdk#getting-started) are placed.
 
-Is a json file named onelogin.sdk.json as follows:
+Is a json file named `onelogin.sdk.json` as follows:
 
 ```json
 {
-  "app_id": "",
-  "client_id": "",
-  "client_secret": "",
+  "client_id": "XXXXX",
+  "client_secret": "XXXXX",
   "ip": "",
-  "profile": "",
-  "region": "",
-  "subdomain": "",
-  "username": ""
+  "region": "us"
 }
 ```
 
@@ -93,21 +89,32 @@ Where:
  * subdomain Needs to be set to the correct subdomain for your Onelogin AWS integration
  * username The email address that is used to authenticate against Onelogin
 
-For security reasons, IP only can be provided at the onelogin.sdk.json.
+For security reasons, IP only can be provided in `onelogin.sdk.json`.
 On a shared machine where multiple users has access, That file should only be readable by the root of the machine that also controls the
 client_id / client_secret, and not by an end user, to prevent him manipulate the IP value.
 
 Place the file in the same path where the python script is invoked.
 
 
-There is an optional file onelogin.aws.json, that can be used if you plan to execute the script with some fixed values and avoid providing it on the command line each time.
+There is an optional file `onelogin.aws.json`, that can be used if you plan to execute the script with some fixed values and avoid providing it on the command line each time.
 
 ```json
 {
-  "duration": "",
-  "aws_region": "",
+  "app_id": "123456",
+  "subdomain": "mydomain",
+  "username": "user.name@mydomain",
+  "profile": "saml",
+  "duration": 28800,
+  "aws_region": "us-west-2",
   "aws_account_id": "",
-  "aws_role_name": ""
+  "aws_role_name": "",
+  "profiles": {
+    "saml": {
+      "aws_account_id": "",
+      "aws_role_name": "",
+      "aws_region": "us-west-2"
+    }
+  }
 }
 ```
 
@@ -117,11 +124,31 @@ Where:
  * aws_region AWS region to use
  * aws_account_id AWS account id to be used
  * aws_role_name AWS role name to select
+ * app_id Onelogin AWS integration app id
+ * subdomain Needs to be set to the correct subdomain for your AWS integration
+ * username The email address that is used to authenticate against Onelogin
+ * profile The AWS profile to use in ~/.aws/credentials
+ * duration Desired AWS Credential Duration in seconds. Default: 3600, Min: 900, Max: 43200
+ * profiles Contains a list of profile->account id, and optionally role name mappings. If this attribute is populated `aws_account_id`, `aws_role_name` and `aws_region` will be set based on the `profile` provided when running the script.
 
-The values provided on the command line will have preference
-over the values defined on this file.
+**Note**: The values provided on the command line will take precedence over the values defined on this file and, values defined at the _global_ scope in the file, will take precedence over values defined at the `profiles` level. IN addition, each attribute is treating individually, so be aware that this may lead to somewhat strange behaviour when overriding a subset of parameters, when others are defined at a _lower level_ and not overriden. For example, if you had a `onelogin.aws.json` config file as follows:
 
-In addition, there is another optional file that can be created to give more human readable names to the account list, named accounts.yaml, which should be placed in the same path where the python script is invoked:
+```json
+{
+  ...
+  "aws_region": "eu-east-1",
+  "profiles": {
+    "my-account": {
+      "aws_account_id": "11111111",
+      "aws_role_name": "Administrator"
+    }
+  }
+}
+```
+
+And, you you subsequently ran the application with the command line arguments `--profile my-account --aws-acccount-id 22222222` then the application would ultimately attempt to log in with the role `Administrator` on account `22222222`, with region set to `eu-east-1` and, if successful, save the credentials to profile `my-account`. 
+
+In addition, there is another optional file that can be created to give more human readable names to the account list, named `accounts.yaml`, which should be placed in the same path where the python script is invoked:
 
 ```yaml
 accounts:
@@ -208,7 +235,7 @@ to install dependencies.
 
 ### Usage
 
-Assuming you have your AWS Multi Account app set up correctly and you’re using valid OneLogin API credentials stored on the onelogin.sdk.json placed at the root of the repository, using this tool is as simple as following the prompts.
+Assuming you have your AWS Multi Account app set up correctly and you’re using valid OneLogin API credentials stored on the `onelogin.sdk.json` placed at the root of the repository, using this tool is as simple as following the prompts.
 
 ```sh
 > onelogin-aws-assume-role
@@ -228,9 +255,11 @@ You can also make it regenerate and update the credentials file by using the `--
 
 You can also make it interactive, with the `-x` or `--interactive`option, and at the end of the iteration, you will be asked if want to generate new credentials for a new user or a new role.
 
-The selection of the AWS account and Role can be also be done with the --aws-account-id and --aws-role-name parameters.
+The selection of the AWS account and Role can be also be done with the `--aws-account-id` and `--aws-role-name` parameters. If both parameters are set then both will be matched against the list of available accounts and roles. If only `--aws-account-id` is specified and you only have one available role in that account, then that role will be chosen by default. If you have more than one role in the given account then you will need to select the appropriate one as per normal.
 
 If you plan to execute the script several times over different Accounts/Roles of the user and you want to cache the SAMLResponse, set the --cache-saml option
+
+By default in order to select Account/Role, the list will be ordered by account ids. Enable the --role_order option to list by role name instead.
 
 For more info execute:
 

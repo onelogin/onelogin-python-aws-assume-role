@@ -3,8 +3,5 @@
   "client_id": "",
   "client_secret": "",
   "ip": "",
-  "profile": "",
-  "region": "",
-  "subdomain": "",
-  "username": ""
+  "region": ""
 }

@@ -18,10 +18,10 @@ from onelogin.api.client import OneLoginClient
 
 try:
     from aws_assume_role.writer import ConfigFileWriter
-    from aws_assume_role.accounts import pretty_choices
+    from aws_assume_role.accounts import process_account_and_role_choices
 except ImportError:
     from writer import ConfigFileWriter
-    from accounts import pretty_choices
+    from accounts import process_account_and_role_choices
 
 
 MFA_ATTEMPS_FOR_WARNING = 3
@@ -95,6 +95,11 @@ def get_options():
                         default=False,
                         help="Store and use cached SAML Response and the Onelogin info to retrieve it.",
                         action="store_true")
+    parser.add_argument("--role_order",
+                        dest="role_order",
+                        default=False,
+                        help="By default in order to select Account/Role, the list will be ordered by account ids. Enable this to list by role name instead.",
+                        action="store_true")
 
     options = parser.parse_args()
 
@@ -118,6 +123,14 @@ def get_options():
             options.aws_account_id = config['aws_account_id']
         if 'aws_role_name' in config.keys() and config['aws_role_name'] and not options.aws_role_name:
             options.aws_role_name = config['aws_role_name']
+        if 'profiles' in config.keys() and config['profiles'] and options.profile_name and options.profile_name in config['profiles'].keys():
+            profile = config['profiles'][options.profile_name]
+            if 'aws_account_id' in profile.keys() and profile['aws_account_id'] and not options.aws_account_id:
+                options.aws_account_id = profile['aws_account_id']
+            if 'aws_role_name' in profile.keys() and profile['aws_role_name'] and not options.aws_role_name:
+                options.aws_role_name = profile['aws_role_name']
+            if 'aws_region' in profile.keys() and profile['aws_region'] and not options.aws_region:
+                options.aws_region = profile['aws_region']
 
     options.time = options.time
     if options.time < 15:
@@ -132,8 +145,6 @@ def get_options():
     elif options.duration > 43200:
         options.duration = 43200
 
-    if options.aws_role_name is None and options.aws_account_id or options.aws_role_name and options.aws_account_id is None:
-        parser.error("--aws-account-id and --aws-role-name need to be set together")
     return options
 
 
@@ -598,6 +609,7 @@ def main():
                 cached_content = result
                 cached_content['app_id'] = app_id
                 write_data_to_cache(cached_content)
+
         saml_response = result['saml_response']
 
         if i == 0 or ask_for_role_again:
@@ -619,23 +631,25 @@ def main():
                 if len(roles) > 1:
                     print("\nAvailable AWS Roles")
                     print("-----------------------------------------------------------------------")
-                    roles_by_app = {}
-                    for index, role in enumerate(roles):
+                    info_indexed_by_account = {}
+                    info_indexed_by_roles = {}
+
+                    for role in roles:
                         role_info = role.split(",")[0].split(":")
                         account_id = role_info[4]
                         role_name = role_info[5].replace("role/", "")
 
-                        pretty_choices(index, role_name, account_id)
+                        if account_id not in info_indexed_by_account:
+                            info_indexed_by_account[account_id] = {}
+                        info_indexed_by_account[account_id][role_name] = role
+                        if options.role_order:
+                            if role_name not in info_indexed_by_roles:
+                                info_indexed_by_roles[role_name] = {}
+                            info_indexed_by_roles[role_name][account_id] = role
 
-                        if account_id in roles_by_app:
-                            roles_by_app[account_id].append((index, role_name))
-                        else:
-                            roles_by_app[account_id] = [(index, role_name)]
+                    selection_info, role_option = process_account_and_role_choices(info_indexed_by_account, info_indexed_by_roles, options)
+
                     print("-----------------------------------------------------------------------")
-
-                    role_option = None
-                    if options.aws_account_id and options.aws_role_name and options.aws_account_id in roles_by_app:
-                        role_option = next((index for index, role_name in roles_by_app[options.aws_account_id] if role_name == options.aws_role_name), None)
 
                     if role_option is None:
                         if options.aws_account_id and options.aws_role_name:
@@ -643,7 +657,7 @@ def main():
                         print("Select the desired AWS Role [0-%s]: " % (len(roles) - 1))
                         role_option = get_selection(len(roles))
 
-                    selected_role = roles[role_option]
+                    selected_role = selection_info[role_option]
                     print("Option %s selected, AWS Role: %s" % (role_option, selected_role))
                 elif len(roles) == 1 and roles[0]:
                     data = roles[0].split(',')
@@ -757,6 +771,7 @@ def main():
             print("%s AWS_SECRET_ACCESS_KEY=%s\n" % (action, secret_access_key))
             print("%s AWS_SESSION_EXPIRATION=%s\n" % (action, session_expiration))
             print("%s AWS_SECURITY_TOKEN=%s\n" % (action, security_token))
+            print("%s AWS_REGION=%s\n" % (action, aws_region))
         else:
             if options.file is None:
                 options.file = os.path.expanduser('~/.aws/credentials')
@@ -773,7 +788,8 @@ def main():
                 'aws_secret_access_key': secret_access_key,
                 'aws_session_token': session_token,
                 'aws_session_expiration': session_expiration,
-                'aws_security_token': security_token
+                'aws_security_token': security_token,
+                'region': aws_region
             }
             config_file_writer.update_config(updated_config, aws_file)
 
