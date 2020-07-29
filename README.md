@@ -71,23 +71,19 @@ Is a json file named `onelogin.sdk.json` as follows:
 
 ```json
 {
-  "client_id": "XXXXX",
-  "client_secret": "XXXXX",
-  "ip": "",
-  "region": "us"
+  "client_id": "",
+  "client_secret": "",
+  "region": "",
+  "ip": ""
 }
 ```
 
 Where:
 
- * app_id Onelogin AWS integration app id
  * client_id  Onelogin OAuth2 client ID
  * client_secret  Onelogin OAuth2 client secret
  * region  Indicates where the instance is hosted. Possible values: 'us' or 'eu'.
  * ip  Indicates the IP to be used on the method to retrieve the SAMLResponse in order to bypass MFA if that IP was previously whitelisted.
- * profile The AWS profile to use in ~/.aws/credentials
- * subdomain Needs to be set to the correct subdomain for your Onelogin AWS integration
- * username The email address that is used to authenticate against Onelogin
 
 For security reasons, IP only can be provided in `onelogin.sdk.json`.
 On a shared machine where multiple users has access, That file should only be readable by the root of the machine that also controls the
@@ -103,13 +99,13 @@ There is an optional file `onelogin.aws.json`, that can be used if you plan to e
   "app_id": "123456",
   "subdomain": "mydomain",
   "username": "user.name@mydomain",
-  "profile": "saml",
-  "duration": 28800,
+  "profile": "profile-1",
+  "duration": 3600,
   "aws_region": "us-west-2",
   "aws_account_id": "",
   "aws_role_name": "",
   "profiles": {
-    "saml": {
+    "profile-1": {
       "aws_account_id": "",
       "aws_role_name": "",
       "aws_region": "us-west-2"
@@ -120,15 +116,14 @@ There is an optional file `onelogin.aws.json`, that can be used if you plan to e
 
 Where:
 
- * duration Desired AWS Credential Duration
- * aws_region AWS region to use
- * aws_account_id AWS account id to be used
- * aws_role_name AWS role name to select
  * app_id Onelogin AWS integration app id
  * subdomain Needs to be set to the correct subdomain for your AWS integration
  * username The email address that is used to authenticate against Onelogin
  * profile The AWS profile to use in ~/.aws/credentials
  * duration Desired AWS Credential Duration in seconds. Default: 3600, Min: 900, Max: 43200
+ * aws_region AWS region to use
+ * aws_account_id AWS account id to be used
+ * aws_role_name AWS role name to select
  * profiles Contains a list of profile->account id, and optionally role name mappings. If this attribute is populated `aws_account_id`, `aws_role_name` and `aws_region` will be set based on the `profile` provided when running the script.
 
 **Note**: The values provided on the command line will take precedence over the values defined on this file and, values defined at the _global_ scope in the file, will take precedence over values defined at the `profiles` level. IN addition, each attribute is treating individually, so be aware that this may lead to somewhat strange behaviour when overriding a subset of parameters, when others are defined at a _lower level_ and not overriden. For example, if you had a `onelogin.aws.json` config file as follows:

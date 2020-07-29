@@ -2,16 +2,19 @@
   "app_id": "",
   "subdomain": "",
   "username": "",
-  "profile": "default",
+  "profile": "profile-1",
   "duration": 3600,
   "aws_region": "",
   "aws_account_id": "",
   "aws_role_name": "",
   "profiles": {
-    "default": {
+    "profile-1": {
       "aws_account_id": "",
       "aws_role_name": "",
       "aws_region": ""
+    },
+    "profile-2": {
+      "aws_account_id": ""
     }
   }
 }

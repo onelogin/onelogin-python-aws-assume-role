@@ -642,6 +642,7 @@ def main():
                         if account_id not in info_indexed_by_account:
                             info_indexed_by_account[account_id] = {}
                         info_indexed_by_account[account_id][role_name] = role
+                        
                         if options.role_order:
                             if role_name not in info_indexed_by_roles:
                                 info_indexed_by_roles[role_name] = {}
