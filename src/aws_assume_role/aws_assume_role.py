@@ -24,7 +24,7 @@ except ImportError:
     from accounts import process_account_and_role_choices
 
 
-MFA_ATTEMPS_FOR_WARNING = 3
+MFA_ATTEMPTS_FOR_WARNING = 3
 TIME_SLEEP_ON_RESPONSE_PENDING = 15
 MAX_ITER_GET_SAML_RESPONSE = 6
 DEFAULT_AWS_DIR = os.path.expanduser('~/.aws')
@@ -80,7 +80,7 @@ def get_options():
                         dest="interactive",
                         default=False,
                         action="store_true",
-                        help="Be asked how procced in each iteration?")
+                        help="Be asked how proceed in each iteration?")
     parser.add_argument("--aws-region",
                         dest="aws_region",
                         help="AWS region to use")
@@ -307,8 +307,8 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                         # regenerate new SAMLResponse and get new state_token
                         return get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info)
                     else:
-                        if mfa_error > MFA_ATTEMPS_FOR_WARNING and len(devices) > 1:
-                            print("The OTP Token was not able to be processed after %s attempts, Do you want to select a new MFA method? (y/n)" % MFA_ATTEMPS_FOR_WARNING)
+                        if mfa_error > MFA_ATTEMPTS_FOR_WARNING and len(devices) > 1:
+                            print("The OTP Token was not able to be processed after %s attempts, Do you want to select a new MFA method? (y/n)" % MFA_ATTEMPTS_FOR_WARNING)
                             answer = get_yes_or_not()
                             if answer == 'y':
                                 # Let's regenerate the SAMLResponse and initialize again the count
@@ -642,7 +642,7 @@ def main():
                         if account_id not in info_indexed_by_account:
                             info_indexed_by_account[account_id] = {}
                         info_indexed_by_account[account_id][role_name] = role
-                        
+
                         if options.role_order:
                             if role_name not in info_indexed_by_roles:
                                 info_indexed_by_roles[role_name] = {}

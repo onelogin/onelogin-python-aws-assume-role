@@ -3,7 +3,7 @@ onelogin-python-aws-assume-role
 
 Assume an AWS Role and get temporary credentials using Onelogin.
 
-Users will be able to choose from among multiple AWS roles in multiple AWS accounts when they sign in using OneLogin in order to assume an AWS Role and obtain temporary AWS acccess credentials.
+Users will be able to choose from among multiple AWS roles in multiple AWS accounts when they sign in using OneLogin in order to assume an AWS Role and obtain temporary AWS access credentials.
 
 This is really useful for customers that run complex environments with multiple AWS accounts, roles and many different people that need periodic access as it saves manually generating and managing AWS credentials.
 
@@ -25,7 +25,7 @@ The "[Configuring SAML for Amazon Web Services (AWS) with Multiple Accounts and 
 #### Github
 
 The project is hosted at github. You can download it from:
-* Lastest release: https://github.com/onelogin/onelogin-python-aws-assume-role/releases/latest
+* Latest release: https://github.com/onelogin/onelogin-python-aws-assume-role/releases/latest
 * Master repo: https://github.com/onelogin/onelogin-python-aws-assume-role/tree/master
 
 #### Pypi
@@ -47,7 +47,7 @@ It works with python2 and python3.
 
 The use of a virtualenv is highly recommended.
 
-Virtualenv helps isolating the python enviroment used to run the toolkit. You can find more details and an installation guide in the [official documentation](http://virtualenv.readthedocs.org/en/latest/).
+Virtualenv helps isolating the python environment used to run the toolkit. You can find more details and an installation guide in the [official documentation](http://virtualenv.readthedocs.org/en/latest/).
 
 Once you have your virtualenv ready and loaded, then you can install the toolkit on it in development mode executing this:
 
@@ -129,7 +129,7 @@ Where:
  * aws_role_name AWS role name to select
  * profiles Contains a list of profile->account id, and optionally role name mappings. If this attribute is populated `aws_account_id`, `aws_role_name` and `aws_region` will be set based on the `profile` provided when running the script.
 
-**Note**: The values provided on the command line will take precedence over the values defined on this file and, values defined at the _global_ scope in the file, will take precedence over values defined at the `profiles` level. IN addition, each attribute is treating individually, so be aware that this may lead to somewhat strange behaviour when overriding a subset of parameters, when others are defined at a _lower level_ and not overriden. For example, if you had a `onelogin.aws.json` config file as follows:
+**Note**: The values provided on the command line will take precedence over the values defined on this file and, values defined at the _global_ scope in the file, will take precedence over values defined at the `profiles` level. IN addition, each attribute is treating individually, so be aware that this may lead to somewhat strange behaviour when overriding a subset of parameters, when others are defined at a _lower level_ and not overridden. For example, if you had a `onelogin.aws.json` config file as follows:
 
 ```json
 {
@@ -144,7 +144,7 @@ Where:
 }
 ````
 
-And, you you subsequently ran the application with the command line arguments `--profile my-account --aws-acccount-id 22222222` then the application would ultimately attempt to log in with the role `Administrator` on account `22222222`, with region set to `eu-east-1` and, if successful, save the credentials to profile `my-account`. 
+And, you you subsequently ran the application with the command line arguments `--profile my-account --aws-account-id 22222222` then the application would ultimately attempt to log in with the role `Administrator` on account `22222222`, with region set to `eu-east-1` and, if successful, save the credentials to profile `my-account`. 
 
 In addition, there is another optional file that can be created to give more human readable names to the account list, named `accounts.yaml`, which should be placed in the same path where the python script is invoked:
 
@@ -158,12 +158,12 @@ This isn't needed for the script to function but it provides a better user exper
 
 ### Docker installation method
 
-* git clone git@github.com:onelogin/onelogin-python-aws-assume-role.git
-* cd onelogin-python-aws-assume-role
-* Enter your credentials in the onelogin.sdk.json file as explained above
-* Save the onelogin.sdk.json file in the root directory of the repo
-* docker build . -t awsaccess:latest
-* docker run -it -v ~/.aws:/root/.aws awsaccess:latest onelogin-aws-assume-role --onelogin-username {user_email} --onelogin-subdomain {subdomain} --onelogin-app-id {app_id} --aws-region {aws region} --profile default
+* `git clone git@github.com:onelogin/onelogin-python-aws-assume-role.git`
+* `cd onelogin-python-aws-assume-role`
+* Enter your credentials in the `onelogin.sdk.json` file as explained above
+* Save the `onelogin.sdk.json` file in the root directory of the repo
+* `docker build . -t awsaccess:latest`
+* `docker run -it -v ~/.aws:/root/.aws awsaccess:latest onelogin-aws-assume-role --onelogin-username {user_email} --onelogin-subdomain {subdomain} --onelogin-app-id {app_id} --aws-region {aws region} --profile default`
 
 ### How the process works
 
@@ -201,7 +201,7 @@ A temporal AWS AccessKey and secretKey are retrieved in addition to a sessionTok
 Those data can be used to generate an AWS BasicSessionCredentials to be used in any AWS API SDK.
 
 
-## Quick Start using the python scrypt
+## Quick Start using the python script
 
 ### Prepare the environment
 
@@ -247,17 +247,17 @@ Or alternately save them to your AWS credentials file to enable faster access fr
 
 By default, the credentials only last for 1 hour, but you can [edit that restriction on AWS and set a max of 12h session duration](https://aws.amazon.com/es/blogs/security/enable-federated-api-access-to-your-aws-resources-for-up-to-12-hours-using-iam-roles/).
 
-Then set the `-z` or `duration` with the desired credentials session duration. The possible value to be used is limited by the AWS Role. Rea more at https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use.html#id_roles_use_view-role-max-session
+Then set the `-z` or `duration` with the desired credentials session duration. The possible value to be used is limited by the AWS Role. Read more at https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use.html#id_roles_use_view-role-max-session
 
-You can also make it regenerate and update the credentials file by using the `--loop` option to specify the number of iterations, and --time to specify the minutes between iterations. If you specified a duration, be sure the value you set for the duration session of the credential is bigger than the value you set for the time, so your credentials will be renewed before expiration.
+You can also make it regenerate and update the credentials file by using the `--loop` option to specify the number of iterations, and `--time` to specify the minutes between iterations. If you specified a duration, be sure the value you set for the duration session of the credential is bigger than the value you set for the time, so your credentials will be renewed before expiration.
 
 You can also make it interactive, with the `-x` or `--interactive`option, and at the end of the iteration, you will be asked if want to generate new credentials for a new user or a new role.
 
 The selection of the AWS account and Role can be also be done with the `--aws-account-id` and `--aws-role-name` parameters. If both parameters are set then both will be matched against the list of available accounts and roles. If only `--aws-account-id` is specified and you only have one available role in that account, then that role will be chosen by default. If you have more than one role in the given account then you will need to select the appropriate one as per normal.
 
-If you plan to execute the script several times over different Accounts/Roles of the user and you want to cache the SAMLResponse, set the --cache-saml option
+If you plan to execute the script several times over different Accounts/Roles of the user and you want to cache the SAMLResponse, set the `--cache-saml` option
 
-By default in order to select Account/Role, the list will be ordered by account ids. Enable the --role_order option to list by role name instead.
+By default in order to select Account/Role, the list will be ordered by account ids. Enable the `--role_order` option to list by role name instead.
 
 For more info execute:
 
@@ -287,9 +287,9 @@ aws ec2 describe-instances
 
 After checking out the repo, run `pip setup install` or `python setup.py develop` to install dependencies.
 
-To release a new version, update the version number in `src/onelogin/api/version.py` and commit it, then you will be able to update it to pypy.
+To release a new version, update the version number in `src/onelogin/api/version.py` and commit it, then you will be able to update it to pypi.
 with `python setup.py sdist upload` and `python setup.py bdist_wheel upload`.
-Create also a relase tag on github.
+Create also a release tag on github.
 
 ## Contributing
 
