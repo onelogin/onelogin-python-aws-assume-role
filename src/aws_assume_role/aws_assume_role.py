@@ -80,7 +80,7 @@ def get_options():
                         dest="interactive",
                         default=False,
                         action="store_true",
-                        help="Be asked how procced in each iteration?")
+                        help="Be asked how proceed in each iteration?")
     parser.add_argument("--aws-region",
                         dest="aws_region",
                         help="AWS region to use")
