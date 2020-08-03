@@ -163,8 +163,13 @@ def get_client(options):
         client_secret = options.client_secret
         region = options.region
     else:
-        if os.path.isfile('onelogin.sdk.json'):
-            json_data = open('onelogin.sdk.json').read()
+        json_data = None
+        onelogin_sdk_filename = "onelogin.sdk.json"
+        if os.path.isfile(onelogin_sdk_filename):
+            json_data = open(onelogin_sdk_filename).read()
+        elif os.path.isfile(os.path.expanduser("~/.aws/%s" % onelogin_sdk_filename)):
+            json_data = open(os.path.expanduser("~/.aws/%s" % onelogin_sdk_filename)).read()
+        if json_data:
             data = json.loads(json_data)
             if 'client_id' in data.keys() and 'client_secret' in data.keys():
                 client_id = data['client_id']
