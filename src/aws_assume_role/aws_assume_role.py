@@ -149,13 +149,14 @@ def get_options():
 
 
 def get_config():
-    json_data = None
     onelogin_aws_filename = "onelogin.aws.json"
     if os.path.isfile(onelogin_aws_filename):
         json_data = open(onelogin_aws_filename).read()
+    	return json.loads(json_data)
     elif os.path.isfile(os.path.expanduser("~/.aws/%s" % onelogin_aws_filename)):
         json_data = open(os.path.expanduser("~/.aws/%s" % onelogin_aws_filename)).read()
-    return json.loads(json_data)
+    	return json.loads(json_data)
+    return None
 
 
 def get_client(options):
