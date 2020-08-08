@@ -69,6 +69,14 @@ def get_options():
     parser.add_argument("-a", "--onelogin-app-id",
                         dest="app_id",
                         help="OneLogin app id")
+    parser.add_argument("-P", "--sdk-properties-file",
+                        dest="sdk_properties_file",
+                        help="Path to OneLogin SDK properties JSON file",
+                        default="./onelogin.sdk.json")
+    parser.add_argument("-C", "--cli-config-file",
+                        dest="cli_config_file",
+                        help="Path to OneLogin CLI config JSON file",
+                        default="./onelogin.aws.json")
     parser.add_argument("-d", "--onelogin-subdomain",
                         dest="subdomain",
                         help="OneLogin subdomain")
@@ -105,7 +113,7 @@ def get_options():
 
     # Read params from file, but only use them
     # if no value provided on command line
-    config = get_config()
+    config = get_config(options)
     if config is not None:
         if 'app_id' in config.keys() and config['app_id'] and not options.app_id:
             options.app_id = config['app_id']
@@ -148,9 +156,9 @@ def get_options():
     return options
 
 
-def get_config():
-    if os.path.isfile('onelogin.aws.json'):
-        json_data = open('onelogin.aws.json').read()
+def get_config(options):
+    if os.path.isfile(options.cli_config_file):
+        json_data = open(options.cli_config_file).read()
         return json.loads(json_data)
 
 
@@ -163,8 +171,8 @@ def get_client(options):
         client_secret = options.client_secret
         region = options.region
     else:
-        if os.path.isfile('onelogin.sdk.json'):
-            json_data = open('onelogin.sdk.json').read()
+        if os.path.isfile(options.sdk_properties_file):
+            json_data = open(options.sdk_properties_file).read()
             data = json.loads(json_data)
             if 'client_id' in data.keys() and 'client_secret' in data.keys():
                 client_id = data['client_id']
@@ -642,7 +650,7 @@ def main():
                         if account_id not in info_indexed_by_account:
                             info_indexed_by_account[account_id] = {}
                         info_indexed_by_account[account_id][role_name] = role
-                        
+
                         if options.role_order:
                             if role_name not in info_indexed_by_roles:
                                 info_indexed_by_roles[role_name] = {}
