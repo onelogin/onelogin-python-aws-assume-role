@@ -83,7 +83,7 @@ def get_options():
                         help="Be asked how procced in each iteration?")
     parser.add_argument("-c", "--config-file",
                         dest="config_file",
-                        help="AWS role name to select")
+                        help="Path to config file (onelogin.aws.json)")
     parser.add_argument("--aws-region",
                         dest="aws_region",
                         help="AWS region to use")
