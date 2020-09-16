@@ -1,1 +1,0 @@
-aws_assume_role.py
