@@ -7,7 +7,7 @@ Users will be able to choose from among multiple AWS roles in multiple AWS accou
 
 This is really useful for customers that run complex environments with multiple AWS accounts, roles and many different people that need periodic access as it saves manually generating and managing AWS credentials.
 
-This repository contains a python script at [src/onelogin/aws-assume-role/aws-assume-role.py](https://github.com/onelogin/onelogin-python-aws-assume-role/blob/master/src/onelogin/aws-assume-role/aws-assume-role.py) that you can execute using `onelogin-aws-assume-role` in order to retrieve the AWS credentials.
+This repository contains a python script at [src/aws_assume_role/aws_assume_role.py](https://github.com/onelogin/onelogin-python-aws-assume-role/blob/master/src/aws_assume_role/aws_assume_role.py) that you can execute using `onelogin-aws-assume-role` in order to retrieve the AWS credentials.
 
 ## AWS and OneLogin prerequisites
 
