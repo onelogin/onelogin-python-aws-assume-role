@@ -149,22 +149,31 @@ def get_options():
 
 
 def get_config():
-    if os.path.isfile('onelogin.aws.json'):
-        json_data = open('onelogin.aws.json').read()
+    json_data = None
+    config_file_name = 'onelogin.aws.json'
+    if os.path.isfile(config_file_name):
+        json_data = open(config_file_name).read()
+    elif os.path.isfile(os.path.expanduser('~') + '/.onelogin/' + config_file_name):
+        json_data = open(os.path.expanduser('~') + '/.onelogin/' + config_file_name).read()
+    if json_data is not None:
         return json.loads(json_data)
 
 
 def get_client(options):
-    client_id = client_secret = ip = None
+    client_id = client_secret = ip = json_data = None
     region = 'us'
+    client_file_name = 'onelogin.sdk.json'
 
     if options.client_id is not None and options.client_secret is not None:
         client_id = options.client_id
         client_secret = options.client_secret
         region = options.region
     else:
-        if os.path.isfile('onelogin.sdk.json'):
-            json_data = open('onelogin.sdk.json').read()
+        if os.path.isfile(client_file_name):
+            json_data = open(client_file_name).read()
+        elif os.path.isfile(os.path.expanduser('~') + '/.onelogin/' + client_file_name):
+            json_data = open(os.path.expanduser('~') + '/.onelogin/' + client_file_name).read()
+        if json_data is not None:
             data = json.loads(json_data)
             if 'client_id' in data.keys() and 'client_secret' in data.keys():
                 client_id = data['client_id']
