@@ -89,7 +89,7 @@ For security reasons, IP only can be provided in `onelogin.sdk.json`.
 On a shared machine where multiple users has access, That file should only be readable by the root of the machine that also controls the
 client_id / client_secret, and not by an end user, to prevent him manipulate the IP value.
 
-Place the file in the `~/.onelogin` directory or in the same path where the python script is invoked.
+Place the file in the `~/.onelogin` directory or in the same path where the python script is invoked or provide the path with the -c option.
 
 
 There is an optional file `onelogin.aws.json`, that can be used if you plan to execute the script with some fixed values and avoid providing it on the command line each time.
@@ -251,7 +251,9 @@ Then set the `-z` or `duration` with the desired credentials session duration. T
 
 You can also make it regenerate and update the credentials file by using the `--loop` option to specify the number of iterations, and --time to specify the minutes between iterations. If you specified a duration, be sure the value you set for the duration session of the credential is bigger than the value you set for the time, so your credentials will be renewed before expiration.
 
-You can also make it interactive, with the `-x` or `--interactive`option, and at the end of the iteration, you will be asked if want to generate new credentials for a new user or a new role.
+You can provide an specific path where locate the settings file by providing the `-c` or `--config-file-path` option. 
+
+You can also make it interactive, with the `-x` or `--interactive` option, and at the end of the iteration, you will be asked if want to generate new credentials for a new user or a new role.
 
 The selection of the AWS account and Role can be also be done with the `--aws-account-id` and `--aws-role-name` parameters. If both parameters are set then both will be matched against the list of available accounts and roles. If only `--aws-account-id` is specified and you only have one available role in that account, then that role will be chosen by default. If you have more than one role in the given account then you will need to select the appropriate one as per normal.
 

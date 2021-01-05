@@ -81,6 +81,9 @@ def get_options():
                         default=False,
                         action="store_true",
                         help="Be asked how procced in each iteration?")
+    parser.add_argument("-c", "--config-file-path",
+                        dest="config_file_path",
+                        help="Path to config file (onelogin.aws.json)")
     parser.add_argument("--aws-region",
                         dest="aws_region",
                         help="AWS region to use")
@@ -105,7 +108,7 @@ def get_options():
 
     # Read params from file, but only use them
     # if no value provided on command line
-    config = get_config()
+    config = get_config(options.config_file_path)
     if config is not None:
         if 'app_id' in config.keys() and config['app_id'] and not options.app_id:
             options.app_id = config['app_id']
@@ -148,10 +151,13 @@ def get_options():
     return options
 
 
-def get_config():
+def get_config(config_file_path):
     json_data = None
     config_file_name = 'onelogin.aws.json'
-    if os.path.isfile(config_file_name):
+
+    if config_file_path is not None and os.path.isfile(os.path.join(config_file_path, config_file_name)):
+        json_data = open(os.path.join(config_file_path, config_file_name)).read()
+    elif os.path.isfile(config_file_name):
         json_data = open(config_file_name).read()
     elif os.path.isfile(os.path.expanduser('~') + '/.onelogin/' + config_file_name):
         json_data = open(os.path.expanduser('~') + '/.onelogin/' + config_file_name).read()
@@ -169,7 +175,9 @@ def get_client(options):
         client_secret = options.client_secret
         region = options.region
     else:
-        if os.path.isfile(client_file_name):
+        if options.config_file_path is not None and os.path.isfile(os.path.join(options.config_file_path, client_file_name)):
+            json_data = open(os.path.join(options.config_file_path, client_file_name)).read()
+        elif os.path.isfile(client_file_name):
             json_data = open(client_file_name).read()
         elif os.path.isfile(os.path.expanduser('~') + '/.onelogin/' + client_file_name):
             json_data = open(os.path.expanduser('~') + '/.onelogin/' + client_file_name).read()
@@ -185,7 +193,6 @@ def get_client(options):
 
     if not client_id or not client_secret:
         raise Exception("OneLogin Client ID and Secret are required")
-
     client = OneLoginClient(client_id, client_secret, region)
     if ip:
         client.ip = ip
