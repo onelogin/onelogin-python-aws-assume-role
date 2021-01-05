@@ -89,7 +89,7 @@ For security reasons, IP only can be provided in `onelogin.sdk.json`.
 On a shared machine where multiple users has access, That file should only be readable by the root of the machine that also controls the
 client_id / client_secret, and not by an end user, to prevent him manipulate the IP value.
 
-Place the file in the same path where the python script is invoked.
+Place the file in the `~/.onelogin` directory or in the same path where the python script is invoked.
 
 
 There is an optional file `onelogin.aws.json`, that can be used if you plan to execute the script with some fixed values and avoid providing it on the command line each time.
