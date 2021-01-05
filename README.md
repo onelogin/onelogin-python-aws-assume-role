@@ -96,12 +96,12 @@ There is an optional file `onelogin.aws.json`, that can be used if you plan to e
 
 ```json
 {
-  "app_id": "",
-  "subdomain": "",
-  "username": "",
-  "profile": "",
+  "app_id": "123456",
+  "subdomain": "myolsubdomain",
+  "username": "user.name",
+  "profile": "profile-1",
   "duration": 3600,
-  "aws_region": "",
+  "aws_region": "us-west-2",
   "aws_account_id": "",
   "aws_role_name": "",
   "profiles": {
