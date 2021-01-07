@@ -7,10 +7,18 @@
 import yaml
 import os
 
-def get_account_aliases_info():
+def get_account_aliases_info(config_file_path):
     account_aliases = []
-    if os.path.isfile('accounts.yaml'):
+    accountsfile = None
+
+    if config_file_path is not None and os.path.isfile(os.path.join(config_file_path, 'accounts.yaml')):
+        accountsfile = open(os.path.join(config_file_path, config_file_name)).read()
+    elif os.path.isfile('accounts.yaml'):
         accountsfile = open('accounts.yaml').read()
+    elif os.path.isfile(os.path.expanduser('~') + '/.onelogin/' + 'accounts.yaml'):
+        accountsfile = open(os.path.expanduser('~') + '/.onelogin/' + 'accounts.yaml').read()
+
+    if accountsfile is not None:
         account_aliases = yaml.load(accountsfile, Loader=yaml.FullLoader)
     return account_aliases
 
@@ -48,7 +56,7 @@ def process_account_and_role_choices(info_indexed_by_account, info_indexed_by_ro
     selection_info = []
     index = 0
     if info_indexed_by_account:
-        account_aliases = get_account_aliases_info()
+        account_aliases = get_account_aliases_info(options.config_file_path)
         # Order by role name
         if len(info_indexed_by_roles) > 0:
             for role_name, account_ids in sorted(info_indexed_by_roles.items()):                
