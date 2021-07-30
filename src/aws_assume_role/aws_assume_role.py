@@ -361,6 +361,9 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
 
 
 def get_attributes(saml_response):
+    if not saml_response:
+        return {}
+
     saml_response_xml = base64.b64decode(saml_response)
     saml_response_elem = ET.fromstring(saml_response_xml)
     NSMAP = {
