@@ -16,6 +16,8 @@ from datetime import datetime
 from lxml import etree as ET
 from onelogin.api.client import OneLoginClient
 
+from urllib.request import Request, urlopen
+
 try:
     from aws_assume_role.writer import ConfigFileWriter
     from aws_assume_role.accounts import process_account_and_role_choices
@@ -33,6 +35,12 @@ SAML_CACHE_PATH = os.path.join(DEFAULT_AWS_DIR, 'saml_cache.txt')
 
 def get_options():
     parser = argparse.ArgumentParser()
+    #--Option for using micin helper tool yujin_nakano
+    parser.add_argument("--micin",
+                        default=False,
+                        action="store_true",
+                        help="Usig micin cli helper")
+    #--end
 
     parser.add_argument("-i", "--client_id",
                         dest="client_id",
@@ -71,6 +79,7 @@ def get_options():
                         help="OneLogin app id")
     parser.add_argument("-d", "--onelogin-subdomain",
                         dest="subdomain",
+                        default="micin",
                         help="OneLogin subdomain")
     parser.add_argument("-z", "--duration",
                         dest="duration",
@@ -105,6 +114,34 @@ def get_options():
                         action="store_true")
 
     options = parser.parse_args()
+
+    #--Option for using micin helper tool yujin_nakano
+    if options.micin:
+        print("\nMICIN Onelogin AWS SSO HELPER\n")
+        print("\nInput your mail address: ")
+        address = sys.stdin.readline().strip()
+        try:
+            req = Request("https://dexf1ldkxl.execute-api.ap-northeast-1.amazonaws.com/onelogin", json.dumps({"user":address}).encode('utf-8'))
+            req.add_header('Authorization', '2sVBr5drjrk2MWf6iPCzdCLPYmYPIS')
+            req.add_header('Content-type','application/json')
+            with urlopen(req) as res1:
+                body = json.loads(res1.read().decode('utf8'))
+            client_id=body['client_id']
+            client_secret=body['client_secret']
+            envs=body['env']
+            for i in range(len(envs)):
+                print("["+str(i)+"] : "+envs[i][0])
+            print("\nInput Number: ")
+            number=sys.stdin.readline().strip()
+            env=envs[int(number)][1]
+            options.client_id=client_id
+            options.client_secret=client_secret
+            options.app_id=str(env)
+            options.username=address
+        except:
+            print("MICIN HELPER WAS BROKEN")
+    #--end
+
 
     # Read params from file, but only use them
     # if no value provided on command line
@@ -513,7 +550,7 @@ def main():
 
     mfa_verify_info = None
     role_arn = principal_arn = None
-    default_aws_region = 'us-west-2'
+    default_aws_region = 'ap-northeast-1'
     ip = None
 
     if hasattr(client, 'ip'):
