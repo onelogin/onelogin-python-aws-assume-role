@@ -108,7 +108,8 @@ There is an optional file `onelogin.aws.json`, that can be used if you plan to e
     "profile-1": {
       "aws_account_id": "",
       "aws_role_name": "",
-      "aws_region": ""
+      "aws_region": "",
+      "app_id": ""
     },
     "profile-2": {
       "aws_account_id": ""
@@ -127,7 +128,7 @@ Where:
  * aws_region AWS region to use
  * aws_account_id AWS account id to be used
  * aws_role_name AWS role name to select
- * profiles Contains a list of profile->account id, and optionally role name mappings. If this attribute is populated `aws_account_id`, `aws_role_name` and `aws_region` will be set based on the `profile` provided when running the script.
+ * profiles Contains a list of profile->account id, and optionally role name mappings. If this attribute is populated `aws_account_id`, `aws_role_name`, `aws_region`, and `app_id` will be set based on the `profile` provided when running the script.
 
 **Note**: The values provided on the command line will take precedence over the values defined on this file and, values defined at the _global_ scope in the file, will take precedence over values defined at the `profiles` level. IN addition, each attribute is treating individually, so be aware that this may lead to somewhat strange behaviour when overriding a subset of parameters, when others are defined at a _lower level_ and not overridden. For example, if you had a `onelogin.aws.json` config file as follows:
 
@@ -144,7 +145,7 @@ Where:
 }
 ````
 
-And, you you subsequently ran the application with the command line arguments `--profile my-account --aws-account-id 22222222` then the application would ultimately attempt to log in with the role `Administrator` on account `22222222`, with region set to `eu-east-1` and, if successful, save the credentials to profile `my-account`. 
+And, you you subsequently ran the application with the command line arguments `--profile my-account --aws-account-id 22222222` then the application would ultimately attempt to log in with the role `Administrator` on account `22222222`, with region set to `eu-east-1` and, if successful, save the credentials to profile `my-account`.
 
 In addition, there is another optional file that can be created to give more human readable names to the account list, named `accounts.yaml`, which should be placed in the same path where the python script is invoked:
 
@@ -251,7 +252,7 @@ Then set the `-z` or `duration` with the desired credentials session duration. T
 
 You can also make it regenerate and update the credentials file by using the `--loop` option to specify the number of iterations, and `--time` to specify the minutes between iterations. If you specified a duration, be sure the value you set for the duration session of the credential is bigger than the value you set for the time, so your credentials will be renewed before expiration.
 
-You can provide an specific path where locate the settings file by providing the `-c` or `--config-file-path` option. 
+You can provide an specific path where locate the settings file by providing the `-c` or `--config-file-path` option.
 
 You can also make it interactive, with the `-x` or `--interactive` option, and at the end of the iteration, you will be asked if want to generate new credentials for a new user or a new role.
 

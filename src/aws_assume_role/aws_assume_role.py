@@ -134,6 +134,8 @@ def get_options():
                 options.aws_role_name = profile['aws_role_name']
             if 'aws_region' in profile.keys() and profile['aws_region'] and not options.aws_region:
                 options.aws_region = profile['aws_region']
+            if 'app_id' in profile.keys() and profile['app_id'] and not options.app_id:
+                options.app_id = profile['app_id']
 
     options.time = options.time
     if options.time < 15:
