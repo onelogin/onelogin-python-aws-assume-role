@@ -12,7 +12,7 @@ def get_account_aliases_info(config_file_path):
     accountsfile = None
 
     if config_file_path is not None and os.path.isfile(os.path.join(config_file_path, 'accounts.yaml')):
-        accountsfile = open(os.path.join(config_file_path, config_file_name)).read()
+        accountsfile = open(os.path.join(config_file_path, 'accounts.yaml')).read()
     elif os.path.isfile('accounts.yaml'):
         accountsfile = open('accounts.yaml').read()
     elif os.path.isfile(os.path.expanduser('~') + '/.onelogin/' + 'accounts.yaml'):
