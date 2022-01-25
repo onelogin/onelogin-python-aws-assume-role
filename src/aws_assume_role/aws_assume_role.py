@@ -66,6 +66,9 @@ def get_options():
     parser.add_argument("--onelogin-password",
                         dest="password",
                         help="OneLogin password")
+    parser.add_argument("--otp",
+                        dest="otp",
+                        help="2FA OTP")
     parser.add_argument("-a", "--onelogin-app-id",
                         dest="app_id",
                         help="OneLogin app id")
@@ -211,7 +214,7 @@ def check_device_exists(devices, device_id):
     return False
 
 
-def get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip=None, mfa_verify_info=None):
+def get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip=None, mfa_verify_info=None, cmd_otp=None):
     saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain, ip)
 
     try_get_saml_response = 0
@@ -306,12 +309,18 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                         print("PUSH notification not confirmed, trying manual mode")
 
                 if not verified_with_push:
-                    # Otherwise, let's request OTP token to be inserted manually
-                    print("Enter the OTP Token for %s: " % device_type)
-                    otp_token = sys.stdin.readline().strip()
+                    if cmd_otp:
+                        otp_token = cmd_otp
+                    else:
+                        # Otherwise, let's request OTP token to be inserted manually
+                        print("Enter the OTP Token for %s: " % device_type)
+                        otp_token = sys.stdin.readline().strip()
             elif 'otp_token' not in mfa_verify_info:
-                print("Enter the OTP Token for %s: " % mfa_verify_info['device_type'])
-                otp_token = sys.stdin.readline().strip()
+                if cmd_otp:
+                    otp_token = cmd_otp
+                else:
+                    print("Enter the OTP Token for %s: " % mfa_verify_info['device_type'])
+                    otp_token = sys.stdin.readline().strip()
             else:
                 otp_token = mfa_verify_info['otp_token']
 
@@ -530,6 +539,10 @@ def main():
     else:
         aws_file = options.file
 
+    cmd_otp = None
+    if options.otp:
+        cmd_otp = options.otp
+
     config_file_writer = None
     botocore_config = botocore.client.Config(signature_version=botocore.UNSIGNED)
     ask_for_user_again = False
@@ -547,6 +560,9 @@ def main():
 
             if result is not None and not is_valid_saml_assertion(b64decode(result['saml_response'])):
                 result = None
+        # Only use the otp provided by the command line on the first loop
+        if i > 0:
+            cmd_otp = None
 
         if options.cache_saml:
             cached_data = get_data_from_cache()
@@ -619,7 +635,7 @@ def main():
                 onelogin_subdomain = sys.stdin.readline().strip()
 
         if result is None:
-            result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info)
+            result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info, cmd_otp)
 
             username_or_email = result['username_or_email']
             password = result['password']
