@@ -3,3 +3,4 @@ boto3
 onelogin
 pyyaml
 lxml
+prettytable==3.2.0

@@ -1,0 +1,25 @@
+login-existing() {
+	pushd <REPLACE WITH DIRECTORY THE CODE IS STORED i.e - /x/x/x/onelogin-python-aws-assume-role >
+	source venv/bin/activate
+	if [ $# -eq 0 ]
+  	then
+    		onelogin-aws-assume-role --onelogin-username <OneLogin Username> --onelogin-password <OneLogin Password> --onelogin-app-id <INSERT APP ID> --onelogin-subdomain <INSERT SUBDOMAIN>
+	elif [ $# -eq 1 ]
+	then
+    		onelogin-aws-assume-role --onelogin-username <OneLogin Username> --onelogin-password <OneLogin Password> --onelogin-app-id <INSERT APP ID> --onelogin-subdomain <INSERT SUBDOMAIN> --profile "$1"
+	fi
+
+	deactivate
+	popd
+}
+
+login-from-list() {
+	pushd <REPLACE WITH DIRECTORY THE CODE IS STORED i.e - /x/x/x/onelogin-python-aws-assume-role >
+	source venv/bin/activate
+	onelogin-get-account-ids
+	echo "Please enter the ID (Column 2) of the account you wish to login to"
+	read accountID
+	onelogin-aws-assume-role --onelogin-username <OneLogin Username> --onelogin-password <OneLogin Password> --onelogin-app-id $accountID --onelogin-subdomain <INSERT SUBDOMAIN>
+	deactivate
+	popd
+}

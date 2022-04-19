@@ -1,22 +1,51 @@
-onelogin-python-aws-assume-role
+OneLogin Tool - onelogin-python-aws-assume-role
 ===============================
+
+## Prerequisites
+
+### Permissions
+
+- For this to work - you will need an API key set up with 'Read' (objects) permission in OneLogin.
+- 'Developers' -> 'API Credentials'
+
+### Credentials
+
+- onelogin.sdk.json << Add your API key from OneLogin to this file + region.
+
+### Command Line Tools
+
+- see 'Shell Profile Example' for an example of setting up memorable names for the methods enclosed in this project in
+  your
+  local bash or shell profile
+
+## Intro
 
 Assume an AWS Role and get temporary credentials using Onelogin.
 
-Users will be able to choose from among multiple AWS roles in multiple AWS accounts when they sign in using OneLogin in order to assume an AWS Role and obtain temporary AWS access credentials.
+Users will be able to choose from among multiple AWS roles in multiple AWS accounts when they sign in using OneLogin in
+order to assume an AWS Role and obtain temporary AWS access credentials.
 
-This is really useful for customers that run complex environments with multiple AWS accounts, roles and many different people that need periodic access as it saves manually generating and managing AWS credentials.
+This is really useful for customers that run complex environments with multiple AWS accounts, roles and many different
+people that need periodic access as it saves manually generating and managing AWS credentials.
 
-This repository contains a python script at [src/aws_assume_role/aws_assume_role.py](https://github.com/onelogin/onelogin-python-aws-assume-role/blob/master/src/aws_assume_role/aws_assume_role.py) that you can execute using `onelogin-aws-assume-role` in order to retrieve the AWS credentials.
+This repository contains a python script
+at [src/aws_assume_role/aws_assume_role.py](https://github.com/onelogin/onelogin-python-aws-assume-role/blob/master/src/aws_assume_role/aws_assume_role.py)
+that you can execute using `onelogin-aws-assume-role` in order to retrieve the AWS credentials.
+
+This repository also includes functionality to list all accounts in OneLogin - to parse the accountIDs into the assume
+role
+command.
 
 ## AWS and OneLogin prerequisites
 
-The "[Configuring SAML for Amazon Web Services (AWS) with Multiple Accounts and Roles](https://onelogin.service-now.com/support?id=kb_article&sys_id=66a91d03db109700d5505eea4b9619a5)" guide explains how to:
- - Add the AWS Multi Account app to OneLogin
- - Configure OneLogin as an Identity Provider for each AWS account
- - Add or update AWS Roles to use OneLogin as the SAML provider
- - Add external roles to give OneLogin access to your AWS accounts
- - Complete your AWS Multi Account configuration in OneLogin
+The "[Configuring SAML for Amazon Web Services (AWS) with Multiple Accounts and Roles](https://onelogin.service-now.com/support?id=kb_article&sys_id=66a91d03db109700d5505eea4b9619a5)"
+guide explains how to:
+
+- Add the AWS Multi Account app to OneLogin
+- Configure OneLogin as an Identity Provider for each AWS account
+- Add or update AWS Roles to use OneLogin as the SAML provider
+- Add external roles to give OneLogin access to your AWS accounts
+- Complete your AWS Multi Account configuration in OneLogin
 
 ## Installation
 
@@ -52,6 +81,7 @@ Virtualenv helps isolating the python environment used to run the toolkit. You c
 Once you have your virtualenv ready and loaded, then you can install the toolkit on it in development mode executing this:
 
 ```
+Recommended - pip install -r requirements.txt
 python setup.py develop
 ```
 

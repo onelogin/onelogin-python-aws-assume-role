@@ -29,7 +29,8 @@ setup(
     license='MIT',
     url='https://github.com/onelogin/onelogin-python-aws-assume-role',
     packages=[
-        'aws_assume_role'
+        'aws_assume_role', 'onelogin_account_ids'
+
     ],
     package_dir={
         '': 'src',
@@ -42,7 +43,8 @@ setup(
         'lxml'
     ],
     entry_points={
-        'console_scripts': ['onelogin-aws-assume-role=aws_assume_role.aws_assume_role:main']
+        'console_scripts': ['onelogin-aws-assume-role=aws_assume_role.aws_assume_role:main',
+                            'onelogin-get-account-ids=onelogin_account_ids.onelogin_account_ids:main']
     },
     test_suite='tests',
     extras_require={
