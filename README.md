@@ -81,7 +81,6 @@ Virtualenv helps isolating the python environment used to run the toolkit. You c
 Once you have your virtualenv ready and loaded, then you can install the toolkit on it in development mode executing this:
 
 ```
-Recommended - pip install -r requirements.txt
 python setup.py develop
 ```
 
