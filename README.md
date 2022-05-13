@@ -9,6 +9,9 @@ This is really useful for customers that run complex environments with multiple 
 
 This repository contains a python script at [src/aws_assume_role/aws_assume_role.py](https://github.com/onelogin/onelogin-python-aws-assume-role/blob/master/src/aws_assume_role/aws_assume_role.py) that you can execute using `onelogin-aws-assume-role` in order to retrieve the AWS credentials.
 
+OneLogin's Smart MFA cannot be enforced with OneLogin's AWS CLI utility
+
+
 ## AWS and OneLogin prerequisites
 
 The "[Configuring SAML for Amazon Web Services (AWS) with Multiple Accounts and Roles](https://onelogin.service-now.com/support?id=kb_article&sys_id=66a91d03db109700d5505eea4b9619a5)" guide explains how to:
