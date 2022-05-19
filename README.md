@@ -36,6 +36,9 @@ This repository also includes functionality to list all accounts in OneLogin - t
 role
 command.
 
+OneLogin's Smart MFA cannot be enforced with OneLogin's AWS CLI utility
+
+
 ## AWS and OneLogin prerequisites
 
 The "[Configuring SAML for Amazon Web Services (AWS) with Multiple Accounts and Roles](https://onelogin.service-now.com/support?id=kb_article&sys_id=66a91d03db109700d5505eea4b9619a5)"
