@@ -106,6 +106,14 @@ def get_options():
                         default=False,
                         help="By default in order to select Account/Role, the list will be ordered by account ids. Enable this to list by role name instead.",
                         action="store_true")
+    parser.add_argument("--ip",
+                        dest="ip",
+                        help="The IP address to use for the SAML assertion")
+    parser.add_argument("--saml-api-version",
+                        dest="saml_api_version",
+                        type=int,
+                        default=1,
+                        help="The version of the OneLogin SAML APIs to use")
 
     options = parser.parse_args()
 
@@ -153,6 +161,13 @@ def get_options():
     elif options.duration > 43200:
         options.duration = 43200
 
+    if not options.saml_api_version:
+        options.saml_api_version = 1
+    elif options.saml_api_version < 1:
+        options.saml_api_version = 1
+    elif options.saml_api_version > 2:
+        options.saml_api_version = 2
+
     return options
 
 
@@ -179,6 +194,7 @@ def get_client(options):
         client_id = options.client_id
         client_secret = options.client_secret
         region = options.region
+        ip = options.ip
     else:
         if options.config_file_path is not None and os.path.isfile(os.path.join(options.config_file_path, client_file_name)):
             json_data = open(os.path.join(options.config_file_path, client_file_name)).read()
@@ -199,6 +215,7 @@ def get_client(options):
     if not client_id or not client_secret:
         raise Exception("OneLogin Client ID and Secret are required")
     client = OneLoginClient(client_id, client_secret, region)
+    client.api_configuration["assertion"] = options.saml_api_version
     if ip:
         client.ip = ip
     client.prepare_token()
@@ -245,6 +262,10 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
         if try_get_saml_response == MAX_ITER_GET_SAML_RESPONSE:
             print("Not able to get a SAMLResponse with success status after %s iteration(s)." % MAX_ITER_GET_SAML_RESPONSE)
             sys.exit()
+
+    if saml_endpoint_response and saml_endpoint_response.type == None:
+        print("SAML assertion failed with message: ", saml_endpoint_response.message)
+        sys.exit()
 
     if saml_endpoint_response and saml_endpoint_response.type == "success":
         if saml_endpoint_response.mfa is not None:
