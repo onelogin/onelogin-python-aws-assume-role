@@ -254,6 +254,8 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                     username_or_email = sys.stdin.readline().strip()
                 else:
                     raise Exception(error_msg)
+            elif client.error is not None:
+                print("Error %s. %s" % (client.error, client.error_description))
 
         if saml_endpoint_response and saml_endpoint_response.type == "pending":
             time.sleep(TIME_SLEEP_ON_RESPONSE_PENDING)
