@@ -1,6 +1,6 @@
 ####### requirements.txt #######
 boto3
-onelogin
+onelogin>=2.0
 pyyaml
 lxml
 prettytable==3.2.0

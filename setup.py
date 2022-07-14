@@ -38,7 +38,7 @@ setup(
     package_data={'': ['accounts.yaml','onelogin.sdk.json']},
     install_requires=[
         'boto3>=1.7.84',
-        'onelogin>=1.9.0',
+        'onelogin>=2.0.3',
         'pyyaml>=5.1.2',
         'lxml'
     ],
