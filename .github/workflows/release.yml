@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Git tag to build release from
+        required: true
+
+jobs:
+  release:
+    runs-on: [self-hosted, x64, linux, eks, us, general, prod]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.tag }}
+
+      - name: Get SHA
+        id: get-sha
+        run: echo "::set-output name=sha::$(git log -1 --format='%H')"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ steps.get-sha.outputs.sha }}
+
+      - name: Print Disk Usage
+        run: |
+          df -ah
+          docker buildx du
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry-type: public
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: public.ecr.aws/h9j7b4d4
+          ECR_REPOSITORY: aws-onelogin
+          IMAGE_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          cd backend
+          docker build --build-arg version=$IMAGE_TAG \
+          --build-arg gh_token=${{ secrets.GH_TOKEN }} \
+          -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG

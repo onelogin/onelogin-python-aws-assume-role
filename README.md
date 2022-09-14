@@ -313,3 +313,9 @@ The gem is available as open source under the terms of the [MIT License](http://
 ## Code of Conduct
 
 Everyone interacting in the OneLogin Assume AWS Role project’s codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/onelogin/onelogin-python-aws-assume-role/blob/master/CODE_OF_CONDUCT.md).
+
+----
+## Adding as an alias:
+```sh
+alias aws-onelogin="docker run -it -v ~/.aws:/root/.aws public.ecr.aws/h9j7b4d4/aws-onelogin onelogin-aws-assume-role --onelogin-subdomain ironsrc --client_id 32533c92659115869907adf94980349216568ea6465952af3bce1aac2bfdb491 --client_secret ee38aecde4afa4978fbb142e5f5f2ee5638d04789230c8f6fdcd8c984603bf9b --onelogin-app-id 432279 --duration 43200 --aws-region us-east-1 --onelogin-username <username@is.com> --profile default"
+```
