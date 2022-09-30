@@ -69,6 +69,10 @@ def get_options():
     parser.add_argument("--otp",
                         dest="otp",
                         help="2FA OTP")
+    parser.add_argument("--otp-device-id",
+                        dest="otp_device_id",
+                        type=int,
+                        help="2FA OTP Device ID")
     parser.add_argument("-a", "--onelogin-app-id",
                         dest="app_id",
                         help="OneLogin app id")
@@ -227,11 +231,11 @@ def get_client(options):
 def check_device_exists(devices, device_id):
     for device in devices:
         if device.id == device_id:
-            return True
-    return False
+            return device
+    return None
 
 
-def get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip=None, mfa_verify_info=None, cmd_otp=None):
+def get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip=None, mfa_verify_info=None, cmd_otp=None, cmd_otp_device_id=None):
     saml_endpoint_response = client.get_saml_assertion(username_or_email, password, app_id, onelogin_subdomain, ip)
 
     try_get_saml_response = 0
@@ -276,24 +280,27 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
             devices = mfa.devices
             state_token = mfa.state_token
 
-            if mfa_verify_info is None or 'device_id' not in mfa_verify_info:
+            if (mfa_verify_info is None or 'device_id' not in mfa_verify_info) and not cmd_otp_device_id:
                 print("\nMFA Required")
                 print("Authenticate using one of these devices:")
             else:
-                if not check_device_exists(devices, mfa_verify_info['device_id']):
-                    print("\nThe device selected with ID %s is not available anymore" % mfa_verify_info['device_id'])
+                device_id = cmd_otp_device_id or mfa_verify_info['device_id']
+                device = check_device_exists(devices, device_id)
+                if device:
+                    mfa_verify_info = mfa_verify_info or dict()
+                    mfa_verify_info['device_id'] = device.id
+                    mfa_verify_info['device_type'] = device_type = device.type
+                else:
+                    print("\nThe device selected with ID %s is not available anymore" % device_id)
                     print("Those are the devices available now:")
                     mfa_verify_info = None
-                else:
-                    device_id = mfa_verify_info['device_id']
-                    device_type = mfa_verify_info['device_type']
 
             # Consider case 0 or MFA that requires a trigger
             if mfa_verify_info is None or device_type in ["OneLogin SMS", "OneLogin Protect"]:
                 if mfa_verify_info is None:
                     print("-----------------------------------------------------------------------")
                     for index, device in enumerate(devices):
-                        print(" " + str(index) + " | " + device.type)
+                        print(" %d | %s (ID %d)" % (index, device.type, device.id))
 
                     print("-----------------------------------------------------------------------")
 
@@ -336,13 +343,13 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                         otp_token = cmd_otp
                     else:
                         # Otherwise, let's request OTP token to be inserted manually
-                        print("Enter the OTP Token for %s: " % device_type)
+                        print("Enter the OTP Token for %s (ID %d): " % (device_type, device_id))
                         otp_token = sys.stdin.readline().strip()
             elif 'otp_token' not in mfa_verify_info:
                 if cmd_otp:
                     otp_token = cmd_otp
                 else:
-                    print("Enter the OTP Token for %s: " % mfa_verify_info['device_type'])
+                    print("Enter the OTP Token for %s (ID %d):" % (mfa_verify_info['device_type'], mfa_verify_info['device_id']))
                     otp_token = sys.stdin.readline().strip()
             else:
                 otp_token = mfa_verify_info['otp_token']
@@ -566,6 +573,8 @@ def main():
     if options.otp:
         cmd_otp = options.otp
 
+    cmd_otp_device_id = options.otp_device_id if options.otp_device_id else None
+
     config_file_writer = None
     botocore_config = botocore.client.Config(signature_version=botocore.UNSIGNED)
     ask_for_user_again = False
@@ -586,6 +595,7 @@ def main():
         # Only use the otp provided by the command line on the first loop
         if i > 0:
             cmd_otp = None
+            cmd_otp_device_id = None
 
         if options.cache_saml:
             cached_data = get_data_from_cache()
@@ -658,7 +668,7 @@ def main():
                 onelogin_subdomain = sys.stdin.readline().strip()
 
         if result is None:
-            result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info, cmd_otp)
+            result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info, cmd_otp, cmd_otp_device_id)
 
             username_or_email = result['username_or_email']
             password = result['password']
