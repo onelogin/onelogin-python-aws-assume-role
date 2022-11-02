@@ -1,5 +1,5 @@
 ####### requirements.txt #######
 boto3
-onelogin>=2.0
+onelogin==2.0.3
 pyyaml
 lxml
