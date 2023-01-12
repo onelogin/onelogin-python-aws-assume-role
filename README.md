@@ -185,10 +185,15 @@ AWS region (`--aws-region`)
 every time, you can specify these parameters as command-line arguments and
 the tool won't ask for them any more._
 
-You can specify 
+You can specify
 OTP Code (`--otp`)
 and the cli will use this otp only for the first interaction
-requiring a manual OTP Code
+requiring a manual OTP Code.
+
+If you have multiple OTP devices, you may also specify an
+OTP Device ID (`--otp-device-id`)
+to indicate which device should be used for OTP for the first interaction
+requiring an OTP Code. This may be used in combination with `--otp`.
 
 _Note: Specifying your password directly with `--onelogin-password` is bad practice,
 you should use that flag together with password managers, eg. with the OSX Keychain:
