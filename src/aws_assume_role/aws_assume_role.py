@@ -319,7 +319,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                     try_get_saml_response_verified = 0
                     # Trigger PUSH and try verify
                     if 'otp_token' not in mfa_verify_info:
-                        saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, None, do_not_notify=False)
+                        saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, cmd_otp, do_not_notify=False)
                         print("PUSH with OTP token sent to device %s" % device_id)
                     while saml_endpoint_response and saml_endpoint_response.type == "pending" and try_get_saml_response_verified < MAX_ITER_GET_SAML_RESPONSE:
                         time.sleep(TIME_SLEEP_ON_RESPONSE_PENDING)
