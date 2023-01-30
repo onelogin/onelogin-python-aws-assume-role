@@ -166,8 +166,7 @@ This isn't needed for the script to function but it provides a better user exper
 * `cd onelogin-python-aws-assume-role`
 * Enter your credentials in the `onelogin.sdk.json` file as explained above
 * Save the `onelogin.sdk.json` file in the root directory of the repo
-* `docker build . -t awsaccess:latest`
-* `docker run -it -v ~/.aws:/root/.aws awsaccess:latest onelogin-aws-assume-role --onelogin-username {user_email} --onelogin-subdomain {subdomain} --onelogin-app-id {app_id} --aws-region {aws region} --profile default`
+* `docker-compose run app onelogin-aws-assume-role --onelogin-username {user_email} --onelogin-subdomain {subdomain} --onelogin-app-id {app_id} --aws-region {aws region} --profile default`
 
 ### How the process works
 
@@ -185,7 +184,7 @@ AWS region (`--aws-region`)
 every time, you can specify these parameters as command-line arguments and
 the tool won't ask for them any more._
 
-You can specify 
+You can specify
 OTP Code (`--otp`)
 and the cli will use this otp only for the first interaction
 requiring a manual OTP Code
