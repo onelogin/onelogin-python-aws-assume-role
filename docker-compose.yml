@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  app:
+    container_name: one-login-aws-assume-role
+    build: ./
+    tty: true
+    volumes:
+      - .:/root/src
+      - ~/.aws:/root/.aws
+    working_dir: /root/src
