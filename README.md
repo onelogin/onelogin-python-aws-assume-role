@@ -190,12 +190,15 @@ OTP Code (`--otp`)
 and the cli will use this otp only for the first interaction
 requiring a manual OTP Code
 
-_Note: Specifying your password directly with `--onelogin-password` is bad practice,
-you should use that flag together with password managers, eg. with the OSX Keychain:
-`--onelogin-password $(security find-generic-password -a $USER -s onelogin -w)`,
-so your password won't be saved in you command line history.
-Please note that your password **will** be visible in your process list,
-if you use this flag (as the expanded command line arguments are part of the name of the process)._
+Flag `--onelogin-password` is meant for integration with a password manager, like OSX Keychain, 1Password, KeePass, LastPass, etc.  e.g.:
+- OSX Keychain: `--onelogin-password $(security find-generic-password -a $USER -s onelogin -w)`
+- 1Password CLI: `--onelogin-password $(op item get "onelogin" --fields label=password)`
+
+To read the onelogin username and password directly from OSX Keychain without using the integation above, on the command-line use `--keychain-account` and/or `--keychain-service`. (In `onelogin.aws.json` those are `keychain_account` and `keychain_service`.)
+- If you specify only the keychain account, it will use "onelogin" as the keychain service.
+- If you specify only the keychain service, then keychain account will default to `onelogin_username` minus the "@" symbol and everything following it.
+
+**NOTE:** *Technically you can specify your password after `--onelogin-password`, but it's bad practice - because that gets saved in your command history and it's visible in your process list.*  **Don't do it.**
 
 With that data, a SAMLResponse is retrieved. And possible AWS Role are retrieved.
 

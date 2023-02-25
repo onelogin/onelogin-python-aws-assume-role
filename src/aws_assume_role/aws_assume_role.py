@@ -9,6 +9,7 @@ import json
 import os
 import sys
 import time
+import keyring
 
 from base64 import b64decode
 from botocore.exceptions import ClientError
@@ -114,7 +115,12 @@ def get_options():
                         type=int,
                         default=1,
                         help="The version of the OneLogin SAML APIs to use")
-
+    parser.add_argument("--keychain-service",
+                        dest="keychain_service",
+                        help="Service name in the OSX Keychain entry, seen as \"Where\" in the Keychain GUI")
+    parser.add_argument("--keychain-account",
+                        dest="keychain_account",
+                        help="Account name in the OSX Keychain entry.")
     options = parser.parse_args()
 
     # Read params from file, but only use them
@@ -147,7 +153,14 @@ def get_options():
                 options.aws_region = profile['aws_region']
             if 'app_id' in profile.keys() and profile['app_id'] and not options.app_id:
                 options.app_id = profile['app_id']
-
+        if 'keychain_service' in config.keys() and config['keychain_service'] and not options.keychain_service:
+            options.keychain_service = config['keychain_service']
+        if 'keychain_account' in config.keys() and config['keychain_account'] and not options.keychain_account:
+            options.keychain_account = config['keychain_account']
+        if options.keychain_service and not options.keychain_account:
+            options.keychain_account = options.username.split("@")[0]
+        if options.keychain_account and not options.keychain_service:
+            options.keychain_service = 'onelogin'
     options.time = options.time
     if options.time < 15:
         options.time = 15
@@ -247,7 +260,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                 elif client.error_description in ["Authentication Failed: Invalid user credentials",
                                                   "password is empty"]:
                     print(error_msg)
-                    password = getpass.getpass("\nOneLogin Password: ")
+                    password = getpass.getpass("\nOneLogin Password1: ")
                 elif client.error_description == "username is empty":
                     print(error_msg)
                     print("OneLogin Username: ")
@@ -626,7 +639,7 @@ def main():
             print("OneLogin Username: ")
             username_or_email = sys.stdin.readline().strip()
 
-            password = getpass.getpass("\nOneLogin Password: ")
+            password = getpass.getpass("\nOneLogin Password2: ")
             ask_for_user_again = False
             ask_for_role_again = True
         elif result is None and missing_onelogin_data:
@@ -641,8 +654,16 @@ def main():
             if password is None:
                 if options.password:
                     password = options.password
+                    print("Password found in config file or command line")
                 else:
-                    password = getpass.getpass("\nOneLogin Password: ")
+                    if options.keychain_service:
+                        password = keyring.get_password(options.keychain_service,options.keychain_account)
+                        if password is not None:
+                            print("Password found in keychain")
+                        else:
+                            print("Unable to find password in OSX keychain for account / service -> ", options.keychain_account, "/", options.keychain_service)
+                if password is None:
+                    password = getpass.getpass("\nOneLogin Password3: ")
 
             if app_id is None:
                 if options.app_id:

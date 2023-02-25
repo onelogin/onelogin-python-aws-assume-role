@@ -3,3 +3,4 @@ boto3>=1.7.84
 onelogin==2.0.4
 pyyaml>=5.1.2
 lxml
+keychain>=23.0.0
