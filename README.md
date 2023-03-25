@@ -190,12 +190,15 @@ OTP Code (`--otp`)
 and the cli will use this otp only for the first interaction
 requiring a manual OTP Code
 
-_Note: Specifying your password directly with `--onelogin-password` is bad practice,
-you should use that flag together with password managers, eg. with the OSX Keychain:
-`--onelogin-password $(security find-generic-password -a $USER -s onelogin -w)`,
-so your password won't be saved in you command line history.
-Please note that your password **will** be visible in your process list,
-if you use this flag (as the expanded command line arguments are part of the name of the process)._
+Flag `--onelogin-password` is meant for integration with a password manager, like OSX Keychain, 1Password, KeePass, LastPass, etc. e.g.:
+- OSX Keychain: `--onelogin-password $(security find-generic-password -a $USER -s onelogin -w)`
+- 1Password CLI: `--onelogin-password $(op item get "onelogin" --fields label=password)`
+
+However, using any of these leaves your password visible in the process table because command-line arguments are expanded before applications are started.  Mac users can avoid that by reading the password directly from OSX Keychain with arguments `--keychain-account` and/or `--keychain-service`.  Skip the command-line arguments entirely by putting those in `onelogin.aws.json` as `keychain_account` and `keychain_service`, respectively.
+- If you specify only the keychain account on the command-line or in `onelogin.aws.json`, it will default to "onelogin" as the keychain service.
+- If you specify only the keychain service, then "keychain account" will use "onelogin username", minus the "@" symbol and everything that follows it.
+
+**NOTE:** *Technically you can specify your password after `--onelogin-password`, but it's bad practice - because that's visible in the machine's process list and, worse, it gets saved in your command history.*  **Don't do it.**
 
 With that data, a SAMLResponse is retrieved. And possible AWS Role are retrieved.
 
