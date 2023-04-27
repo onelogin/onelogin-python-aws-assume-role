@@ -79,8 +79,11 @@ fi
 
 echo "Setting up config dir ${CONFIG_DIR}"
 
+CREATED_CONFIG_FILES=N
+
 if [ ! -f "$ONELOGIN_AWS_JSON" ]; then
     echo "File $ONELOGIN_AWS_JSON does not exist, creating it."
+    CREATED_CONFIG_FILES=Y
     cat >> "${ONELOGIN_AWS_JSON}" << 'END'
 {
     "app_id": "",
@@ -94,6 +97,7 @@ fi
 
 if [ ! -f "$ONELOGIN_SDK_JSON" ]; then
     echo "File $ONELOGIN_SDK_JSON does not exist, creating it."
+    CREATED_CONFIG_FILES=Y
     cat >> "${ONELOGIN_SDK_JSON}" << 'END'
 {
     "client_id": "",
@@ -105,8 +109,15 @@ END
 fi
 
 if [ ! -f "$ACCOUNTS_YAML" ]; then
+    CREATED_CONFIG_FILES=Y
     echo "File $ACCOUNTS_YAML does not exist, creating it."
     cp ./accounts.yaml.template "${ACCOUNTS_YAML}"
+fi
+
+if [ "${CREATED_CONFIG_FILES}" == "Y" ]; then
+    echo "You will need to edit the files in ${CONFIG_DIR} to add your info.  Check with a team member for the correct values."
+    echo "Exiting."
+    exit 1
 fi
 
 AWS_PROFILE=${1:-${AWS_PROFILE}}
@@ -127,5 +138,3 @@ ${CMD}
 # Cleanup
 deactivate
 popd
-
-echo "Make sure you edit the files in ${CONFIG_DIR} to add your info.  Check with a team member for the correct values."
