@@ -92,7 +92,7 @@ if [ ! -f "$ONELOGIN_AWS_JSON" ]; then
 END
 fi
 
-if [ ! -f "$ONELOGIN_AWS_JSON" ]; then
+if [ ! -f "$ONELOGIN_SDK_JSON" ]; then
     echo "File $ONELOGIN_SDK_JSON does not exist, creating it."
     cat >> "${ONELOGIN_SDK_JSON}" << 'END'
 {
