@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+
+# This script will setup and execute the onelogin-aws-assume-role tool.
+# It will create a virtual environment in the repo directory and install the tool.
+# It will also create a config directory in ~/.onelogin and create the config files.
+
+
+ADDED_ARGS="--role_order"
+
+set -e
+
+#SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+CONFIG_DIR=~/.onelogin
+CONFIG_ENVS_FILE="${CONFIG_DIR}"/envs.sh
+ONELOGIN_AWS_JSON="${CONFIG_DIR}"/onelogin.aws.json
+ONELOGIN_SDK_JSON="${CONFIG_DIR}"/onelogin.sdk.json
+ACCOUNTS_YAML="${CONFIG_DIR}"/accounts.yaml
+
+if [ ! -d "${CONFIG_DIR}" ]; then
+    echo "Directory ${CONFIG_DIR} does not exist, creating it."
+    mkdir -p "${CONFIG_DIR}"
+fi
+
+if [ ! -f "$CONFIG_ENVS_FILE" ]; then
+    echo "File $CONFIG_ENVS_FILE does not exist, creating it."
+    touch "${CONFIG_ENVS_FILE}"
+fi
+
+source "${CONFIG_ENVS_FILE}"
+
+if [ "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}" == "" ]; then
+    echo 'What is the path of the "onelogin-python-aws-assume-role" repo?'
+    read -r -p "Enter the directory: " ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR
+    export ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR
+fi
+
+# NOTE: The usage of python here for this one-liner is absolutely shameful.  BUT...
+#       I can not get `realpath` or `readlink` to work on MacOS.
+#       I have tried.
+#       I have failed.
+ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR=$(python -c 'import os, sys; print(os.path.realpath(os.path.expanduser(sys.argv[1])))' "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}")
+
+if [ ! -d "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}"/src/aws_assume_role ]; then
+    echo "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR} does not appear to be the correct repo."
+    echo "You may need to clone the repo from https://github.com/onelogin/onelogin-python-aws-assume-role"
+    echo
+    echo '    #cd <where ever you want to clone the repo>'
+    echo "    git clone git@github.com:onelogin/onelogin-python-aws-assume-role.git"
+    echo
+    echo "If ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR is incorrectly set in ${CONFIG_ENVS_FILE} you will need to correct it."
+    echo "Exiting."
+    exit 1
+fi
+
+grep 'ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR' "${CONFIG_ENVS_FILE}" || echo "export ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR=${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}" >> "${CONFIG_ENVS_FILE}"
+
+pushd "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}"
+
+if [ ! -d "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}"/venv ]; then
+    echo "Creating virtual environment in ${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}/venv"
+    python -m venv ./venv
+fi
+
+# NOTE: This sets ${VIRTUAL_ENV}
+source ./venv/bin/activate
+
+if [ ! -f "${VIRTUAL_ENV}"/bin/onelogin-aws-assume-role ]; then
+    echo "Installing onelogin-aws-assume-role"
+    python setup.py install
+fi
+
+echo "Setting up config dir ${CONFIG_DIR}"
+
+if [ ! -f "$ONELOGIN_AWS_JSON" ]; then
+    echo "File $ONELOGIN_AWS_JSON does not exist, creating it."
+    cat >> "${ONELOGIN_AWS_JSON}" << 'END'
+{
+    "app_id": "",
+    "subdomain": "",
+    "username": "",
+    "duration": 43199,
+    "aws_region": ""
+}
+END
+fi
+
+if [ ! -f "$ONELOGIN_AWS_JSON" ]; then
+    echo "File $ONELOGIN_SDK_JSON does not exist, creating it."
+    cat >> "${ONELOGIN_SDK_JSON}" << 'END'
+{
+    "client_id": "",
+    "client_secret": "",
+    "region": "",
+    "ip": ""
+}
+END
+fi
+
+if [ ! -f "$ACCOUNTS_YAML" ]; then
+    echo "File $ACCOUNTS_YAML does not exist, creating it."
+    cp ./accounts.yaml.template "${ACCOUNTS_YAML}"
+fi
+
+AWS_PROFILE=${1:-${AWS_PROFILE}}
+if [ -z "${AWS_PROFILE}" ]; then
+    echo "You could have specified and AWS_PROFILE fy exporting the variable 'AWS_PROFILE' or by passing it as the first argument to this script."
+    read -r -p "Enter the profile name: " AWS_PROFILE
+    export AWS_PROFILE
+    ADDED_ARGS="${ADDED_ARGS} --profile=${AWS_PROFILE}"
+fi
+
+####################################
+# Actually run the onelogin script #
+####################################
+"${VIRTUAL_ENV}"/bin/onelogin-aws-assume-role "${ADDED_ARGS}"
+
+# Cleanup
+deactivate
+popd
+
+echo "Make sure you edit the files in ${CONFIG_DIR} to add your info.  Check with a team member for the correct values."
