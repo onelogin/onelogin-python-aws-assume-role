@@ -120,7 +120,9 @@ ADDED_ARGS="${ADDED_ARGS} --profile=${AWS_PROFILE}"
 ####################################
 # Actually run the onelogin script #
 ####################################
-"${VIRTUAL_ENV}"/bin/onelogin-aws-assume-role ${ADDED_ARGS}
+CMD="${VIRTUAL_ENV}"/bin/onelogin-aws-assume-role ${ADDED_ARGS}
+echo "Running: ${CMD}"
+${CMD}
 
 # Cleanup
 deactivate
