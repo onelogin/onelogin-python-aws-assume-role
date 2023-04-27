@@ -122,7 +122,7 @@ fi
 
 AWS_PROFILE=${1:-${AWS_PROFILE}}
 if [ -z "${AWS_PROFILE}" ]; then
-    echo "You could have specified and AWS_PROFILE fy exporting the variable 'AWS_PROFILE' or by passing it as the first argument to this script."
+    echo "You could have specified and AWS_PROFILE by exporting the variable 'AWS_PROFILE' or by passing it as the first argument to this script."
     read -r -p "Enter the profile name: " AWS_PROFILE
     export AWS_PROFILE
 fi
