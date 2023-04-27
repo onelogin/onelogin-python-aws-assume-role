@@ -39,7 +39,6 @@ fi
 if [ "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}" == "" ]; then
     echo 'What is the path of the "onelogin-python-aws-assume-role" repo?'
     read -r -p "Enter the directory: " ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR
-    export ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR
 fi
 
 # NOTE: The usage of python here for this one-liner is absolutely shameful.  BUT...
