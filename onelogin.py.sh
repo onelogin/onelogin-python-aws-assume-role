@@ -38,7 +38,7 @@ fi
 #       I can not get `realpath` or `readlink` to work on MacOS.
 #       I have tried.
 #       I have failed.
-ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR=$(python -c 'import os, sys; print(os.path.realpath(os.path.expanduser(sys.argv[1])))' "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}")
+ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR=$(python3 -c 'import os, sys; print(os.path.realpath(os.path.expanduser(sys.argv[1])))' "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}")
 
 if [ ! -d "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}"/src/aws_assume_role ]; then
     echo "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR} does not appear to be the correct repo."
@@ -58,7 +58,7 @@ pushd "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}"
 
 if [ ! -d "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}"/venv ]; then
     echo "Creating virtual environment in ${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}/venv"
-    python -m venv ./venv
+    python3 -m venv ./venv
 fi
 
 # NOTE: This sets ${VIRTUAL_ENV}
@@ -66,7 +66,7 @@ source ./venv/bin/activate
 
 if [ ! -f "${VIRTUAL_ENV}"/bin/onelogin-aws-assume-role ]; then
     echo "Installing onelogin-aws-assume-role"
-    python setup.py install
+    python3 setup.py install
 fi
 
 echo "Setting up config dir ${CONFIG_DIR}"
