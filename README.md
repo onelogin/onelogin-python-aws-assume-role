@@ -1,6 +1,13 @@
 onelogin-python-aws-assume-role
 ===============================
 
+This repo is a clone of https://github.com/onelogin/onelogin-python-aws-assume-role with the following changes:
+I've added a `onelogin.py.sh` script that can be used to run the `onelogin-aws-assume-role` script from a bash shell.
+Feel free co copy/sym-link this script elsewhere for ease of use.
+
+
+# Forked-repo readme:
+
 Assume an AWS Role and get temporary credentials using Onelogin.
 
 Users will be able to choose from among multiple AWS roles in multiple AWS accounts when they sign in using OneLogin in order to assume an AWS Role and obtain temporary AWS access credentials.
