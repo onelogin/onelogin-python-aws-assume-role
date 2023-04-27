@@ -114,8 +114,8 @@ if [ -z "${AWS_PROFILE}" ]; then
     echo "You could have specified and AWS_PROFILE fy exporting the variable 'AWS_PROFILE' or by passing it as the first argument to this script."
     read -r -p "Enter the profile name: " AWS_PROFILE
     export AWS_PROFILE
-    ADDED_ARGS="${ADDED_ARGS} --profile=${AWS_PROFILE}"
 fi
+ADDED_ARGS="${ADDED_ARGS} --profile=${AWS_PROFILE}"
 
 ####################################
 # Actually run the onelogin script #
