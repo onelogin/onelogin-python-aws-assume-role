@@ -9,7 +9,7 @@ ADDED_ARGS="--role_order"
 
 set -e
 
-#SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 CONFIG_DIR=~/.onelogin
 CONFIG_ENVS_FILE="${CONFIG_DIR}"/envs.sh
 ONELOGIN_AWS_JSON="${CONFIG_DIR}"/onelogin.aws.json
@@ -27,6 +27,14 @@ if [ ! -f "$CONFIG_ENVS_FILE" ]; then
 fi
 
 source "${CONFIG_ENVS_FILE}"
+
+if [ "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}" == "" ]; then
+    echo "ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR is not set in ${CONFIG_ENVS_FILE}"
+    echo "Checking $SCRIPT_DIR for the repo."
+    if [ -d "${SCRIPT_DIR}/src/aws_assume_role" ]; then
+        ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR="${SCRIPT_DIR}"
+    fi
+fi
 
 if [ "${ONELOGIN_PYTHON_AWS_ASSUME_ROLE_DIR}" == "" ]; then
     echo 'What is the path of the "onelogin-python-aws-assume-role" repo?'
