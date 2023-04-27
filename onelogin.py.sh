@@ -112,7 +112,7 @@ fi
 ####################################
 # Actually run the onelogin script #
 ####################################
-"${VIRTUAL_ENV}"/bin/onelogin-aws-assume-role "${ADDED_ARGS}"
+"${VIRTUAL_ENV}"/bin/onelogin-aws-assume-role ${ADDED_ARGS}
 
 # Cleanup
 deactivate
