@@ -73,6 +73,7 @@ source ./venv/bin/activate
 
 if [ ! -f "${VIRTUAL_ENV}"/bin/onelogin-aws-assume-role ]; then
     echo "Installing onelogin-aws-assume-role"
+    pip install -r requirements.txt
     python3 setup.py install
 fi
 
