@@ -78,11 +78,11 @@ fi
 
 echo "Setting up config dir ${CONFIG_DIR}"
 
-CREATED_CONFIG_FILES=N
+EXIT_EARLY=N
 
 if [ ! -f "$ONELOGIN_AWS_JSON" ]; then
     echo "File $ONELOGIN_AWS_JSON does not exist, creating it."
-    CREATED_CONFIG_FILES=Y
+    EXIT_EARLY=Y
     cat >> "${ONELOGIN_AWS_JSON}" << 'END'
 {
     "app_id": "",
@@ -96,7 +96,7 @@ fi
 
 if [ ! -f "$ONELOGIN_SDK_JSON" ]; then
     echo "File $ONELOGIN_SDK_JSON does not exist, creating it."
-    CREATED_CONFIG_FILES=Y
+    EXIT_EARLY=Y
     cat >> "${ONELOGIN_SDK_JSON}" << 'END'
 {
     "client_id": "",
@@ -108,12 +108,20 @@ END
 fi
 
 if [ ! -f "$ACCOUNTS_YAML" ]; then
-    CREATED_CONFIG_FILES=Y
+    EXIT_EARLY=Y
     echo "File $ACCOUNTS_YAML does not exist, creating it."
     cp ./accounts.yaml.template "${ACCOUNTS_YAML}"
 fi
 
-if [ "${CREATED_CONFIG_FILES}" == "Y" ]; then
+grep '"app_id": ""' ~/.onelogin/onelogin.aws.json && EXIT_EARLY=Y
+grep '"subdomain": ""' ~/.onelogin/onelogin.aws.json && EXIT_EARLY=Y
+grep '"username": ""' ~/.onelogin/onelogin.aws.json && EXIT_EARLY=Y
+grep '"aws_region": ""' ~/.onelogin/onelogin.aws.json && EXIT_EARLY=Y
+grep '"client_id": ""' ~/.onelogin/onelogin.sdk.json && EXIT_EARLY=Y
+grep '"client_secret": ""' ~/.onelogin/onelogin.sdk.json && EXIT_EARLY=Y
+grep '"region": ""' ~/.onelogin/onelogin.sdk.json && EXIT_EARLY=Y
+
+if [ "${EXIT_EARLY}" == "Y" ]; then
     echo "You will need to edit the files in ${CONFIG_DIR} to add your info.  Check with a team member for the correct values."
     echo "Exiting."
     exit 1
