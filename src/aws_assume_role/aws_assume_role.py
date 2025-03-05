@@ -220,6 +220,8 @@ def get_client(options):
         client.ip = ip
     client.prepare_token()
     if client.error == 401 or client.access_token is None:
+        print(f"Client: {client}")
+        print(f"Error: {client.error}")
         raise Exception("Invalid client_id and client_secret. Access_token could not be retrieved")
     return client
 
