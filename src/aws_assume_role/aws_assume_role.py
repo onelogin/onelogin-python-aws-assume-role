@@ -117,35 +117,49 @@ def get_options():
 
     options = parser.parse_args()
 
+    # Track which options were provided via command line
+    # These should not be overridden by config file values
+    cli_provided = {
+        'app_id': options.app_id is not None,
+        'subdomain': options.subdomain is not None,
+        'username': options.username is not None,
+        'profile_name': options.profile_name is not None,
+        'duration': options.duration is not None,
+        'aws_region': options.aws_region is not None,
+        'aws_account_id': options.aws_account_id is not None,
+        'aws_role_name': options.aws_role_name is not None,
+    }
+
     # Read params from file, but only use them
     # if no value provided on command line
     config = get_config(options.config_file_path)
     if config is not None:
-        if 'app_id' in config.keys() and config['app_id'] and not options.app_id:
+        if 'app_id' in config.keys() and config['app_id'] and not cli_provided['app_id']:
             options.app_id = config['app_id']
-        if 'subdomain' in config.keys() and config['subdomain'] and not options.subdomain:
+        if 'subdomain' in config.keys() and config['subdomain'] and not cli_provided['subdomain']:
             options.subdomain = config['subdomain']
-        if 'username' in config.keys() and config['username'] and not options.username:
+        if 'username' in config.keys() and config['username'] and not cli_provided['username']:
             options.username = config['username']
-        if 'profile' in config.keys() and config['profile'] and not options.profile_name:
+        if 'profile' in config.keys() and config['profile'] and not cli_provided['profile_name']:
             options.profile_name = config['profile']
-        if 'duration' in config.keys() and config['duration'] and not options.duration:
+        if 'duration' in config.keys() and config['duration'] and not cli_provided['duration']:
             options.duration = config['duration']
-        if 'aws_region' in config.keys() and config['aws_region'] and not options.aws_region:
+        if 'aws_region' in config.keys() and config['aws_region'] and not cli_provided['aws_region']:
             options.aws_region = config['aws_region']
-        if 'aws_account_id' in config.keys() and config['aws_account_id'] and not options.aws_account_id:
+        if 'aws_account_id' in config.keys() and config['aws_account_id'] and not cli_provided['aws_account_id']:
             options.aws_account_id = config['aws_account_id']
-        if 'aws_role_name' in config.keys() and config['aws_role_name'] and not options.aws_role_name:
+        if 'aws_role_name' in config.keys() and config['aws_role_name'] and not cli_provided['aws_role_name']:
             options.aws_role_name = config['aws_role_name']
+        # Profile-specific values override global config defaults (but not CLI arguments)
         if 'profiles' in config.keys() and config['profiles'] and options.profile_name and options.profile_name in config['profiles'].keys():
             profile = config['profiles'][options.profile_name]
-            if 'aws_account_id' in profile.keys() and profile['aws_account_id'] and not options.aws_account_id:
+            if 'aws_account_id' in profile.keys() and profile['aws_account_id'] and not cli_provided['aws_account_id']:
                 options.aws_account_id = profile['aws_account_id']
-            if 'aws_role_name' in profile.keys() and profile['aws_role_name'] and not options.aws_role_name:
+            if 'aws_role_name' in profile.keys() and profile['aws_role_name'] and not cli_provided['aws_role_name']:
                 options.aws_role_name = profile['aws_role_name']
-            if 'aws_region' in profile.keys() and profile['aws_region'] and not options.aws_region:
+            if 'aws_region' in profile.keys() and profile['aws_region'] and not cli_provided['aws_region']:
                 options.aws_region = profile['aws_region']
-            if 'app_id' in profile.keys() and profile['app_id'] and not options.app_id:
+            if 'app_id' in profile.keys() and profile['app_id'] and not cli_provided['app_id']:
                 options.app_id = profile['app_id']
 
     options.time = options.time
