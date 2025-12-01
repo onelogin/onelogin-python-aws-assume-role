@@ -133,12 +133,18 @@ Where:
  * aws_role_name AWS role name to select
  * profiles Contains a list of profile->account id, and optionally role name mappings. If this attribute is populated `aws_account_id`, `aws_role_name`, `aws_region`, and `app_id` will be set based on the `profile` provided when running the script.
 
-**Note**: The values provided on the command line will take precedence over the values defined on this file and, values defined at the _global_ scope in the file, will take precedence over values defined at the `profiles` level. IN addition, each attribute is treating individually, so be aware that this may lead to somewhat strange behaviour when overriding a subset of parameters, when others are defined at a _lower level_ and not overridden. For example, if you had a `onelogin.aws.json` config file as follows:
+**Note**: Configuration values have the following precedence (from highest to lowest):
+1. Command line arguments (highest priority)
+2. Profile-specific values from the config file
+3. Global default values from the config file (lowest priority)
+
+This means that profile-specific values will override global defaults, but command line arguments will override both. Each attribute is treated individually. For example, if you had a `onelogin.aws.json` config file as follows:
 
 ```json
 {
   ...
   "aws_region": "eu-east-1",
+  "aws_account_id": "99999999",
   "profiles": {
     "my-account": {
       "aws_account_id": "11111111",
@@ -148,7 +154,9 @@ Where:
 }
 ````
 
-And, you you subsequently ran the application with the command line arguments `--profile my-account --aws-account-id 22222222` then the application would ultimately attempt to log in with the role `Administrator` on account `22222222`, with region set to `eu-east-1` and, if successful, save the credentials to profile `my-account`.
+When you run with `--profile my-account`, the application will use `aws_account_id: 11111111` (from profile, overriding the global default of `99999999`), `aws_role_name: Administrator` (from profile), and `aws_region: eu-east-1` (from global defaults, since not specified in profile).
+
+If you subsequently ran the application with `--profile my-account --aws-account-id 22222222` then the application would ultimately attempt to log in with the role `Administrator` on account `22222222` (command line override), with region set to `eu-east-1` (global default), and if successful, save the credentials to profile `my-account`.
 
 In addition, there is another optional file that can be created to give more human readable names to the account list, named `accounts.yaml`, which should be placed in the same path where the python script is invoked:
 
