@@ -9,6 +9,7 @@ import json
 import os
 import sys
 import time
+import keyring
 
 from base64 import b64decode
 from botocore.exceptions import ClientError
@@ -114,7 +115,12 @@ def get_options():
                         type=int,
                         default=1,
                         help="The version of the OneLogin SAML APIs to use")
-
+    parser.add_argument("--keychain-service",
+                        dest="keychain_service",
+                        help="Service name in the OSX Keychain entry, seen as \"Where\" in the Keychain GUI")
+    parser.add_argument("--keychain-account",
+                        dest="keychain_account",
+                        help="Account name in the OSX Keychain entry.")
     options = parser.parse_args()
 
     # Track which options were provided via command line
@@ -161,7 +167,14 @@ def get_options():
                 options.aws_region = profile['aws_region']
             if 'app_id' in profile.keys() and profile['app_id'] and not cli_provided['app_id']:
                 options.app_id = profile['app_id']
-
+        if 'keychain_service' in config.keys() and config['keychain_service'] and not options.keychain_service:
+            options.keychain_service = config['keychain_service']
+        if 'keychain_account' in config.keys() and config['keychain_account'] and not options.keychain_account:
+            options.keychain_account = config['keychain_account']
+        if options.keychain_service and not options.keychain_account:
+            options.keychain_account = options.username.split("@")[0]
+        if options.keychain_account and not options.keychain_service:
+            options.keychain_service = 'onelogin'
     options.time = options.time
     if options.time < 15:
         options.time = 15
@@ -656,6 +669,13 @@ def main():
                 if options.password:
                     password = options.password
                 else:
+                    if options.keychain_service:
+                        password = keyring.get_password(options.keychain_service, options.keychain_account)
+                        if password is not None:
+                            pass
+                        else:
+                            print("Unable to find password in OSX keychain for account / service -> ", options.keychain_account, "/", options.keychain_service)
+                if password is None:
                     password = getpass.getpass("\nOneLogin Password: ")
 
             if app_id is None:
