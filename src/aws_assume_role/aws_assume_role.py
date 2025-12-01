@@ -745,8 +745,8 @@ def main():
                 principal_arn = selected_role_data[1]
                 ask_for_user_again = False
 
-        if i == 0:
-            # AWS Region
+        if i == 0 or ask_for_role_again:
+            # AWS Region - prompt on first run or when switching roles
             if options.aws_region:
                 aws_region = options.aws_region
             else:
@@ -754,6 +754,7 @@ def main():
                 aws_region = sys.stdin.readline().strip()
             if not aws_region or aws_region == "-":
                 aws_region = default_aws_region
+            ask_for_role_again = False
 
         conn = boto3.client('sts', region_name=aws_region, config=botocore_config)
         try:
