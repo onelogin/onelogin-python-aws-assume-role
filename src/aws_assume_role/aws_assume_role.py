@@ -15,14 +15,15 @@ from base64 import b64decode
 from botocore.exceptions import ClientError
 from datetime import datetime
 from lxml import etree as ET
-from onelogin.api.client import OneLoginClient
 
 try:
     from aws_assume_role.writer import ConfigFileWriter
     from aws_assume_role.accounts import process_account_and_role_choices
+    from aws_assume_role.onelogin_client import OneLoginClient
 except ImportError:
     from writer import ConfigFileWriter
     from accounts import process_account_and_role_choices
+    from onelogin_client import OneLoginClient
 
 
 MFA_ATTEMPTS_FOR_WARNING = 3
@@ -280,9 +281,18 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                     print("OneLogin Username: ")
                     username_or_email = sys.stdin.readline().strip()
                 else:
-                    raise Exception(error_msg)
+                    # An unrecognized 400/401 here is typically a wrong AWS app
+                    # id (or an app the user isn't entitled to). Fail fast rather
+                    # than re-submitting credentials, which can lock the account.
+                    raise Exception(error_msg + "\nVerify that the AWS app id is "
+                                    "correct and assigned to this user.")
             elif client.error is not None:
+                # Any other error (e.g. app not found, rate limited, server
+                # error) will not be resolved by re-sending the same request.
+                # Retrying would burn login attempts and can lock the OneLogin
+                # account, so stop here instead of looping (see issue 69).
                 print("Error %s. %s" % (client.error, client.error_description))
+                sys.exit(1)
 
         if saml_endpoint_response and saml_endpoint_response.type == "pending":
             time.sleep(TIME_SLEEP_ON_RESPONSE_PENDING)
