@@ -3,4 +3,4 @@ boto3>=1.7.84
 requests>=2.20.0
 pyyaml>=5.1.2
 lxml
-keychain>=23.0.0
+keyring>=23.0.0

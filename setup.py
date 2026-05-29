@@ -44,7 +44,8 @@ setup(
         'boto3>=1.7.84',
         'requests>=2.20.0',
         'pyyaml>=5.1.2',
-        'lxml'
+        'lxml',
+        'keyring>=23.0.0'
     ],
     entry_points={
         'console_scripts': ['onelogin-aws-assume-role=aws_assume_role.aws_assume_role:main']
