@@ -33,14 +33,31 @@ The project is hosted at github. You can download it from:
 
 #### Pypi
 
-The toolkit is hosted in pypi, you can find the python-saml package at [https://pypi.python.org/pypi/onelogin-aws-assume-role](https://pypi.python.org/pypi/onelogin-aws-assume-role)
+The toolkit is hosted on pypi, you can find the package at [https://pypi.org/project/onelogin-aws-assume-role/](https://pypi.org/project/onelogin-aws-assume-role/)
+
+The quickest way to install the command-line tool is from PyPI:
+
+```
+pip install onelogin-aws-assume-role
+```
+
+To install it as an isolated command-line tool (recommended if you just want to
+use it rather than develop on it), use [pipx](https://pypa.github.io/pipx/):
+
+```
+pipx install onelogin-aws-assume-role
+```
+
+This avoids having to manage a virtualenv yourself; `pipx` keeps the tool and
+its dependencies isolated while still putting `onelogin-aws-assume-role` on your
+PATH.
 
 ### Dependencies
 
-It works with python2 and python3.
+Requires Python 3.8+.
 
 * boto3  AWS Python SDK
-* onelogin  OneLogin Python SDK
+* requests  HTTP client used to call the OneLogin API
 * pyyaml  YAML parser
 * lxml  XML and HTML processor
 
