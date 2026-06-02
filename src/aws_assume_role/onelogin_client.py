@@ -36,6 +36,7 @@ import requests
 TOKEN_REQUEST_URL = "https://%s.onelogin.com/auth/oauth2/v2/token"
 GET_SAML_ASSERTION_URL = "https://%s.onelogin.com/api/%s/saml_assertion"
 GET_SAML_VERIFY_FACTOR = "https://%s.onelogin.com/api/%s/saml_assertion/verify_factor"
+GET_OTP_DEVICES_URL = "https://%s.onelogin.com/api/%s/users/%s/otp_devices"
 
 # Versions supported by the SAML assertion endpoints; the last entry is the
 # default when the caller does not request a specific version.
@@ -45,7 +46,12 @@ SAML_ASSERTION_VERSIONS = [1, 2]
 class Device(object):
     def __init__(self, data):
         self.id = data.get('device_id', data.get('id'))
-        self.type = str(data.get('device_type', data.get('type', '')))
+        self.type = str(data.get('device_type', data.get('type_display_name', data.get('type', ''))))
+        self.display_name = data.get('user_display_name', '')
+        self.auth_factor_name = data.get('auth_factor_name', '')
+        self.default = data.get('default', False)
+        self.active = data.get('active', True)
+        self.needs_trigger = data.get('needs_trigger', False)
 
 
 class MFA(object):
@@ -259,3 +265,31 @@ class OneLoginClient(object):
         if otp_token:
             data['otp_token'] = otp_token
         return self._retrieve_saml_assertion(url, data, version_id)
+
+    # -- MFA Devices ------------------------------------------------------
+
+    def get_otp_devices(self, user_id):
+        """Fetch the full OTP device list for a user from the devices endpoint.
+
+        Returns a list of Device objects with richer metadata than the SAML
+        assertion response provides (display name, active status, etc.).
+        Returns an empty list on error, leaving self.error set.
+        """
+        self.clean_error()
+        version_id = self._assertion_version()
+        url = GET_OTP_DEVICES_URL % (self._get_subdomain(), version_id, user_id)
+        response = requests.get(url, headers=self.get_authorized_headers(),
+                                timeout=self.default_timeout)
+        if response.status_code == 200:
+            try:
+                content = response.json()
+            except ValueError:
+                return []
+            devices_data = content.get('data', {})
+            if isinstance(devices_data, dict):
+                otp_devices = devices_data.get('otp_devices', [])
+            else:
+                otp_devices = []
+            return [Device(d) for d in otp_devices if d.get('active', True)]
+        self.set_error(response)
+        return []

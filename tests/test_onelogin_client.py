@@ -127,6 +127,36 @@ class DeviceTest(unittest.TestCase):
         self.assertEqual(d.id, 7)
         self.assertEqual(d.type, 'OneLogin Protect')
 
+    def test_otp_devices_api_fields(self):
+        d = Device({
+            'id': 99,
+            'type_display_name': 'Duo Security',
+            'user_display_name': 'Work Duo',
+            'auth_factor_name': 'Duo',
+            'default': True,
+            'active': True,
+            'needs_trigger': False,
+        })
+        self.assertEqual(d.id, 99)
+        self.assertEqual(d.type, 'Duo Security')
+        self.assertEqual(d.display_name, 'Work Duo')
+        self.assertEqual(d.auth_factor_name, 'Duo')
+        self.assertTrue(d.default)
+        self.assertTrue(d.active)
+        self.assertFalse(d.needs_trigger)
+
+    def test_defaults_when_extended_fields_absent(self):
+        d = Device({'device_id': 1, 'device_type': 'OneLogin SMS'})
+        self.assertEqual(d.display_name, '')
+        self.assertEqual(d.auth_factor_name, '')
+        self.assertFalse(d.default)
+        self.assertTrue(d.active)
+        self.assertFalse(d.needs_trigger)
+
+    def test_type_prefers_device_type_over_type_display_name(self):
+        d = Device({'id': 1, 'device_type': 'GoogleAuth', 'type_display_name': 'Google Authenticator'})
+        self.assertEqual(d.type, 'GoogleAuth')
+
 
 class OneLoginClientHelpersTest(unittest.TestCase):
     def test_subdomain_from_region(self):
@@ -238,6 +268,107 @@ class RequestConstructionTest(unittest.TestCase):
             'app_id': 12345, 'device_id': '678', 'state_token': 'state-tok',
             'do_not_notify': True, 'otp_token': '999999',
         })
+
+
+class GetOtpDevicesTest(unittest.TestCase):
+    @mock.patch.object(onelogin_client.requests, 'get')
+    def test_returns_device_list_with_rich_fields(self, get):
+        get.return_value = _fake_response(200, {
+            'data': {
+                'otp_devices': [
+                    {
+                        'id': 1, 'type_display_name': 'Google Authenticator',
+                        'user_display_name': 'My Phone', 'auth_factor_name': 'Google Authenticator',
+                        'default': True, 'active': True, 'needs_trigger': False,
+                    },
+                    {
+                        'id': 2, 'type_display_name': 'OneLogin SMS',
+                        'active': True,
+                    },
+                ]
+            }
+        })
+        client = OneLoginClient('cid', 'csecret', region='us')
+        client.access_token = 'tok'
+        devices = client.get_otp_devices(999)
+
+        self.assertEqual(len(devices), 2)
+        self.assertEqual(devices[0].id, 1)
+        self.assertEqual(devices[0].type, 'Google Authenticator')
+        self.assertEqual(devices[0].display_name, 'My Phone')
+        self.assertTrue(devices[0].default)
+        self.assertIsNone(client.error)
+
+    @mock.patch.object(onelogin_client.requests, 'get')
+    def test_filters_out_inactive_devices(self, get):
+        get.return_value = _fake_response(200, {
+            'data': {
+                'otp_devices': [
+                    {'id': 1, 'type_display_name': 'Google Authenticator', 'active': True},
+                    {'id': 2, 'type_display_name': 'OneLogin SMS', 'active': False},
+                ]
+            }
+        })
+        client = OneLoginClient('cid', 'csecret')
+        client.access_token = 'tok'
+        devices = client.get_otp_devices(42)
+
+        self.assertEqual(len(devices), 1)
+        self.assertEqual(devices[0].id, 1)
+
+    @mock.patch.object(onelogin_client.requests, 'get')
+    def test_url_and_bearer_header(self, get):
+        get.return_value = _fake_response(200, {'data': {'otp_devices': []}})
+        client = OneLoginClient('cid', 'csecret', region='eu')
+        client.access_token = 'tok'
+        client.api_configuration['assertion'] = 1
+        client.get_otp_devices(42)
+
+        url = get.call_args[0][0]
+        headers = get.call_args[1]['headers']
+        self.assertEqual(url, 'https://api.eu.onelogin.com/api/1/users/42/otp_devices')
+        self.assertEqual(headers['Authorization'], 'bearer tok')
+
+    @mock.patch.object(onelogin_client.requests, 'get')
+    def test_non_200_sets_error_and_returns_empty(self, get):
+        get.return_value = _fake_response(403, {
+            'status': {'message': 'Forbidden', 'error': True, 'code': 403}
+        })
+        client = OneLoginClient('cid', 'csecret')
+        client.access_token = 'tok'
+        devices = client.get_otp_devices(42)
+
+        self.assertEqual(devices, [])
+        self.assertEqual(client.error, '403')
+        self.assertEqual(client.error_description, 'Forbidden')
+
+    @mock.patch.object(onelogin_client.requests, 'get')
+    def test_malformed_json_returns_empty(self, get):
+        resp = mock.Mock()
+        resp.status_code = 200
+        resp.json.side_effect = ValueError('no json')
+        get.return_value = resp
+        client = OneLoginClient('cid', 'csecret')
+        client.access_token = 'tok'
+
+        self.assertEqual(client.get_otp_devices(42), [])
+
+    @mock.patch.object(onelogin_client.requests, 'get')
+    def test_non_dict_data_returns_empty(self, get):
+        get.return_value = _fake_response(200, {'data': []})
+        client = OneLoginClient('cid', 'csecret')
+        client.access_token = 'tok'
+
+        self.assertEqual(client.get_otp_devices(42), [])
+
+    @mock.patch.object(onelogin_client.requests, 'get')
+    def test_empty_otp_devices_list(self, get):
+        get.return_value = _fake_response(200, {'data': {'otp_devices': []}})
+        client = OneLoginClient('cid', 'csecret')
+        client.access_token = 'tok'
+
+        self.assertEqual(client.get_otp_devices(42), [])
+        self.assertIsNone(client.error)
 
 
 if __name__ == '__main__':
