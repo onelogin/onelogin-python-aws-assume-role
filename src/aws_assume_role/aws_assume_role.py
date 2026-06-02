@@ -313,6 +313,11 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
             devices = mfa.devices
             state_token = mfa.state_token
 
+            if mfa.user and mfa.user.get('id'):
+                enriched = client.get_otp_devices(mfa.user['id'])
+                if enriched:
+                    devices = enriched
+
             if mfa_verify_info is None or 'device_id' not in mfa_verify_info:
                 print("\nMFA Required")
                 print("Authenticate using one of these devices:")
@@ -330,7 +335,10 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                 if mfa_verify_info is None:
                     print("-----------------------------------------------------------------------")
                     for index, device in enumerate(devices):
-                        print(" " + str(index) + " | " + device.type)
+                        label = device.auth_factor_name or device.type
+                        if device.display_name:
+                            label += " (%s)" % device.display_name
+                        print(" " + str(index) + " | " + label)
 
                     print("-----------------------------------------------------------------------")
 
