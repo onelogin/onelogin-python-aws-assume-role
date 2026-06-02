@@ -335,7 +335,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                 if mfa_verify_info is None:
                     print("-----------------------------------------------------------------------")
                     for index, device in enumerate(devices):
-                        label = device.auth_factor_name
+                        label = device.auth_factor_name or device.type
                         if device.display_name:
                             label += " (%s)" % device.display_name
                         print(" " + str(index) + " | " + label)

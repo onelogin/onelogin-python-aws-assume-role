@@ -321,7 +321,10 @@ class GetOtpDevicesTest(unittest.TestCase):
         get.return_value = _fake_response(200, {'data': {'otp_devices': []}})
         client = OneLoginClient('cid', 'csecret', region='eu')
         client.access_token = 'tok'
-        client.api_configuration['assertion'] = 1
+        # The OTP devices endpoint is a User Management API route, versioned
+        # independently of the SAML assertion API: the URL must stay on v1
+        # regardless of the configured assertion version.
+        client.api_configuration['assertion'] = 2
         client.get_otp_devices(42)
 
         url = get.call_args[0][0]

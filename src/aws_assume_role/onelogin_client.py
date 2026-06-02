@@ -36,7 +36,9 @@ import requests
 TOKEN_REQUEST_URL = "https://%s.onelogin.com/auth/oauth2/v2/token"
 GET_SAML_ASSERTION_URL = "https://%s.onelogin.com/api/%s/saml_assertion"
 GET_SAML_VERIFY_FACTOR = "https://%s.onelogin.com/api/%s/saml_assertion/verify_factor"
-GET_OTP_DEVICES_URL = "https://%s.onelogin.com/api/%s/users/%s/otp_devices"
+# The User Management API is versioned independently of the SAML Assertion
+# API, so this path hardcodes v1 rather than reusing the assertion version.
+GET_OTP_DEVICES_URL = "https://%s.onelogin.com/api/1/users/%s/otp_devices"
 
 # Versions supported by the SAML assertion endpoints; the last entry is the
 # default when the caller does not request a specific version.
@@ -276,8 +278,7 @@ class OneLoginClient(object):
         Returns an empty list on error, leaving self.error set.
         """
         self.clean_error()
-        version_id = self._assertion_version()
-        url = GET_OTP_DEVICES_URL % (self._get_subdomain(), version_id, user_id)
+        url = GET_OTP_DEVICES_URL % (self._get_subdomain(), user_id)
         response = requests.get(url, headers=self.get_authorized_headers(),
                                 timeout=self.default_timeout)
         if response.status_code == 200:
