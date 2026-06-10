@@ -349,7 +349,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                         device_selection = 0
                     device = devices[device_selection]
                     device_id = device.id
-                    device_type = device.type
+                    device_type = device.auth_factor_name or device.type
 
                     mfa_verify_info = {
                         'device_id': device_id,

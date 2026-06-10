@@ -157,6 +157,18 @@ class DeviceTest(unittest.TestCase):
         d = Device({'id': 1, 'device_type': 'GoogleAuth', 'type_display_name': 'Google Authenticator'})
         self.assertEqual(d.type, 'GoogleAuth')
 
+    def test_auth_factor_name_stable_when_type_display_name_is_custom(self):
+        d = Device({
+            'id': 2,
+            'type_display_name': 'OneLogin SMS - UK - NEW',
+            'auth_factor_name': 'OneLogin SMS',
+            'active': True,
+            'needs_trigger': True,
+        })
+        self.assertEqual(d.type, 'OneLogin SMS - UK - NEW')
+        self.assertEqual(d.auth_factor_name, 'OneLogin SMS')
+        self.assertTrue(d.needs_trigger)
+
 
 class OneLoginClientHelpersTest(unittest.TestCase):
     def test_subdomain_from_region(self):
