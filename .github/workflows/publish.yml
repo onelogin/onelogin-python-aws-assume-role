@@ -11,7 +11,26 @@ on:
     types: [published]
 
 jobs:
+  # Runs before the "pypi" environment's approval gate, so a release tagged
+  # without bumping src/aws_assume_role/version.py fails here instead of
+  # waiting for an approver and then being rejected by PyPI.
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check release tag matches package version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION=$(python3 -c 'exec(open("src/aws_assume_role/version.py").read()); print(__version__)')
+          if [ "${TAG#v}" != "$VERSION" ]; then
+            echo "::error::Release tag $TAG does not match package version $VERSION in src/aws_assume_role/version.py"
+            exit 1
+          fi
+
   build-and-publish:
+    needs: check-version
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
