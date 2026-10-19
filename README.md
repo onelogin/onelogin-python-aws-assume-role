@@ -304,6 +304,28 @@ For more info execute:
 > onelogin-aws-assume-role --help
 ```
 
+### Use as an AWS `credential_process`
+
+Instead of writing credentials to `~/.aws/credentials`, the AWS CLI and SDKs can ask this tool for them whenever they need them, using the [`credential_process`](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html) setting. Add a profile to `~/.aws/config`:
+
+```ini
+[profile dev]
+credential_process = onelogin-aws-assume-role --credential-process --profile dev
+region = us-west-2
+```
+
+Then use it like any other profile:
+
+```sh
+> aws s3 ls --profile dev
+```
+
+With `--credential-process` the tool prints the credentials as the JSON the AWS CLI/SDKs expect, and does not write any file. The credentials are cached in `~/.aws/onelogin/cache` and reused until they are within 10 minutes of expiring, so you only log in to OneLogin (and complete MFA) when they need renewing. Delete that directory to force a new login.
+
+Any prompts (password, MFA, role selection, ...) are shown on your terminal. To avoid them, put the username, app id, subdomain and the AWS account/role for each profile in `onelogin.aws.json` (see the `profiles` setting above) and use the keychain options for the password. Each `--profile`, account and role gets its own cache entry. If the tool is started without a terminal, for example by an IDE, the prompts go to stderr instead, which the AWS CLI and most SDKs don't show, so everything except MFA needs to be configured.
+
+`--credential-process` can't be combined with `--file`, `--loop` or `--interactive`.
+
 ## Test your credentials with AWS CLI
 
 AWS provide a CLI tool that makes remote access and management of resources super easy. If you don’t have it already then read more about it and install it from here.

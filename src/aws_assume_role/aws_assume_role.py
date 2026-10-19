@@ -4,16 +4,19 @@ import argparse
 import base64
 import boto3
 import botocore.client
+import contextlib
 import getpass
+import hashlib
 import json
 import os
 import sys
+import tempfile
 import time
 import keyring
 
 from base64 import b64decode
 from botocore.exceptions import ClientError
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from lxml import etree as ET
 
 try:
@@ -31,6 +34,11 @@ TIME_SLEEP_ON_RESPONSE_PENDING = 15
 MAX_ITER_GET_SAML_RESPONSE = 6
 DEFAULT_AWS_DIR = os.path.expanduser('~/.aws')
 SAML_CACHE_PATH = os.path.join(DEFAULT_AWS_DIR, 'saml_cache.txt')
+CREDENTIAL_CACHE_DIR = os.path.join(DEFAULT_AWS_DIR, 'onelogin', 'cache')
+# botocore re-runs a credential_process on every API call once its credentials
+# are within 10 minutes of expiry, so never hand back cached ones closer than that.
+CREDENTIAL_CACHE_REFRESH_WINDOW = timedelta(minutes=10)
+TERMINAL_INPUT, TERMINAL_OUTPUT = ('CONIN$', 'CONOUT$') if os.name == 'nt' else ('/dev/tty', '/dev/tty')
 
 
 def get_options():
@@ -122,7 +130,15 @@ def get_options():
     parser.add_argument("--keychain-account",
                         dest="keychain_account",
                         help="Account name in the OSX Keychain entry.")
+    parser.add_argument("--credential-process",
+                        dest="credential_process",
+                        default=False,
+                        action="store_true",
+                        help="Print the credentials as JSON for the AWS credential_process setting, reusing them until they are about to expire")
     options = parser.parse_args()
+
+    if options.credential_process and (options.file or options.loop != 1 or options.interactive):
+        parser.error("--credential-process can't be combined with --file, --loop or --interactive")
 
     # Track which options were provided via command line
     # These should not be overridden by config file values
@@ -581,10 +597,116 @@ def append_iterations(iterations):
     return iterations
 
 
-def main():
-    print("\nOneLogin AWS Assume Role Tool\n")
+def get_credential_cache_path(options):
+    """
+    Returns the cache file for the role these options select, so changing the
+    role (or profile) in the config doesn't keep serving the old role's credentials.
+    """
+    key = json.dumps([options.subdomain, options.username, options.app_id,
+                      options.aws_account_id, options.aws_role_name, options.profile_name])
+    return os.path.join(CREDENTIAL_CACHE_DIR, hashlib.sha256(key.encode('utf-8')).hexdigest() + '.json')
 
+
+def read_cached_credentials(cache_path):
+    """
+    Returns the cached credential_process output, or None when there is none or
+    it is about to expire.
+    """
+    try:
+        with open(cache_path) as f:
+            credentials = json.load(f)
+        expiration = datetime.strptime(credentials['Expiration'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if expiration - datetime.now(timezone.utc) < CREDENTIAL_CACHE_REFRESH_WINDOW:
+        return None
+    return credentials
+
+
+def write_cached_credentials(cache_path, credentials):
+    try:
+        os.makedirs(os.path.dirname(cache_path), mode=0o700, exist_ok=True)
+        # mkstemp creates the file 0600; the rename stops a concurrent run reading it half-written
+        fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(cache_path))
+        try:
+            with os.fdopen(fd, 'w') as f:
+                json.dump(credentials, f)
+            os.replace(tmp_path, cache_path)
+        except OSError:
+            os.remove(tmp_path)
+            raise
+    except OSError as e:
+        print("Unable to cache the AWS credentials: %s" % e, file=sys.stderr)
+
+
+@contextlib.contextmanager
+def prompts_on_terminal():
+    """
+    Sends prompts and messages to the user's terminal while running as a
+    credential_process: the AWS CLI/SDK parses stdout as the credentials and
+    captures stderr, so neither reaches the user. Falls back to stderr when there
+    is no terminal (e.g. when started by an IDE).
+    """
+    saved_stdin, saved_stdout = sys.stdin, sys.stdout
+    with contextlib.ExitStack() as stack:
+        try:
+            terminal_in = stack.enter_context(open(TERMINAL_INPUT))
+            terminal_out = stack.enter_context(open(TERMINAL_OUTPUT, 'w'))
+        except OSError:
+            terminal_in, terminal_out = saved_stdin, sys.stderr
+        sys.stdin, sys.stdout = terminal_in, terminal_out
+        try:
+            yield
+        finally:
+            sys.stdin, sys.stdout = saved_stdin, saved_stdout
+
+
+def credential_process(options):
+    """
+    Prints the credentials in the format the AWS CLI/SDKs expect from a
+    credential_process. They run it for every command, so the credentials are
+    cached until they are about to expire instead of logging in to OneLogin each time.
+    https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html
+    """
+    cache_path = get_credential_cache_path(options)
+    output = read_cached_credentials(cache_path)
+    if output is None:
+        with prompts_on_terminal():
+            try:
+                aws_session_token = assume_role(options)
+            except SystemExit as e:
+                # Prompts give up with a bare sys.exit(); the AWS CLI must see that as a failure
+                if not e.code:
+                    sys.exit(1)
+                raise
+        credentials = aws_session_token['Credentials']
+        output = {
+            'Version': 1,
+            'AccessKeyId': credentials['AccessKeyId'],
+            'SecretAccessKey': credentials['SecretAccessKey'],
+            'SessionToken': credentials['SessionToken'],
+            'Expiration': credentials['Expiration'].astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'AccountId': aws_session_token['AssumedRoleUser']['Arn'].split(':')[4],
+        }
+        write_cached_credentials(cache_path, output)
+    print(json.dumps(output, indent=2))
+
+
+def main():
     options = get_options()
+    if options.credential_process:
+        credential_process(options)
+    else:
+        assume_role(options)
+
+
+def assume_role(options):
+    """
+    Logs in to OneLogin and assumes the selected AWS role, then prints or saves
+    the credentials. With --credential-process it returns the
+    AssumeRoleWithSAML response instead.
+    """
+    print("\nOneLogin AWS Assume Role Tool\n")
 
     client = get_client(options)
 
@@ -867,6 +989,9 @@ def main():
         security_token = aws_session_token['Credentials']['SessionToken']
         session_expiration = aws_session_token['Credentials']['Expiration'].strftime('%Y-%m-%dT%H:%M:%S%z')
         arn = aws_session_token['AssumedRoleUser']['Arn']
+
+        if options.credential_process:
+            return aws_session_token
 
         if options.profile_name is None and options.file is None:
             action = "export"
