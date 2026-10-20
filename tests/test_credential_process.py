@@ -24,7 +24,7 @@ from aws_assume_role import aws_assume_role  # noqa: E402
 def _options(**overrides):
     values = dict(subdomain='acme', username='user@acme.com', app_id='123',
                   aws_account_id='111111111111', aws_role_name='Admin',
-                  profile_name='dev', credential_process=True)
+                  profile_name='dev', duration=3600, credential_process=True)
     values.update(overrides)
     return mock.Mock(**values)
 
@@ -99,14 +99,30 @@ class CredentialProcessTest(unittest.TestCase):
         patched.assert_not_called()
         self.assertEqual(json.loads(stdout)['AccessKeyId'], 'ASIAEXAMPLE')
 
-    def test_logs_in_again_after_the_refresh_time(self):
+    def write_cache(self, refresh_time, **overrides):
+        credentials = {'Version': 1, 'AccessKeyId': 'ASIACACHED', 'SecretAccessKey': 'secret',
+                       'SessionToken': 'token', 'Expiration': '2099-01-01T00:00:00Z'}
+        credentials.update(overrides)
         cache_path = aws_assume_role.get_credential_cache_path(_options())
-        aws_assume_role.write_cached_credentials(cache_path, {'Version': 1}, datetime.now(timezone.utc) - timedelta(seconds=1))
+        aws_assume_role.write_cached_credentials(cache_path, credentials, refresh_time)
+
+    def test_logs_in_again_after_the_refresh_time(self):
+        self.write_cache(datetime.now(timezone.utc) - timedelta(seconds=1))
 
         patched, stdout, _ = self.run_credential_process(_options(), lambda options: _sts_response())
 
         patched.assert_called_once()
         self.assertEqual(json.loads(stdout)['AccessKeyId'], 'ASIAEXAMPLE')
+
+    def test_ignores_incomplete_cached_credentials(self):
+        for overrides in ({'Version': 2}, {'SessionToken': ''}, {'Expiration': None}):
+            with self.subTest(overrides=overrides):
+                self.write_cache(datetime.now(timezone.utc) + timedelta(hours=1), **overrides)
+
+                patched, stdout, _ = self.run_credential_process(_options(), lambda options: _sts_response())
+
+                patched.assert_called_once()
+                self.assertEqual(json.loads(stdout)['AccessKeyId'], 'ASIAEXAMPLE')
 
     def test_fifteen_minute_sessions_are_reused(self):
         # STS's shortest session starts inside botocore's 15-minute advisory window,
@@ -131,6 +147,13 @@ class CredentialProcessTest(unittest.TestCase):
         self.run_credential_process(_options(), lambda options: _sts_response())
 
         patched, _, _ = self.run_credential_process(_options(aws_role_name='ReadOnly'), lambda options: _sts_response())
+
+        patched.assert_called_once()
+
+    def test_cache_is_per_duration(self):
+        self.run_credential_process(_options(duration=43200), lambda options: _sts_response(timedelta(hours=12)))
+
+        patched, _, _ = self.run_credential_process(_options(duration=900), lambda options: _sts_response())
 
         patched.assert_called_once()
 

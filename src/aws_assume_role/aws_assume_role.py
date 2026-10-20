@@ -617,10 +617,10 @@ def append_iterations(iterations):
 def get_credential_cache_path(options):
     """
     Returns the cache file for the role these options select, so changing the
-    role (or profile) in the config doesn't keep serving the old role's credentials.
+    role, profile or duration in the config doesn't keep serving the old credentials.
     """
     key = json.dumps([options.subdomain, options.username, options.app_id,
-                      options.aws_account_id, options.aws_role_name, options.profile_name])
+                      options.aws_account_id, options.aws_role_name, options.profile_name, options.duration])
     return os.path.join(CREDENTIAL_CACHE_DIR, hashlib.sha256(key.encode('utf-8')).hexdigest() + '.json')
 
 
@@ -646,9 +646,11 @@ def read_cached_credentials(cache_path):
             cached = json.load(f)
         refresh_time = datetime.strptime(cached['RefreshTime'], CREDENTIAL_TIME_FORMAT).replace(tzinfo=timezone.utc)
         credentials = cached['Credentials']
+        complete = credentials['Version'] == 1 and all(
+            credentials[key] for key in ('AccessKeyId', 'SecretAccessKey', 'SessionToken', 'Expiration'))
     except (OSError, ValueError, KeyError, TypeError):
         return None
-    if datetime.now(timezone.utc) >= refresh_time:
+    if not complete or datetime.now(timezone.utc) >= refresh_time:
         return None
     return credentials
 
