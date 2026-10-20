@@ -7,10 +7,12 @@ parse from stdout, the credential cache, and keeping prompts off stdout."""
 import sys
 import os
 import io
+import contextlib
 import json
 import shutil
 import stat
 import tempfile
+import threading
 import unittest
 from contextlib import redirect_stdout, redirect_stderr
 from datetime import datetime, timedelta, timezone
@@ -149,6 +151,35 @@ class CredentialProcessTest(unittest.TestCase):
         patched, _, _ = self.run_credential_process(_options(aws_role_name='ReadOnly'), lambda options: _sts_response())
 
         patched.assert_called_once()
+
+    def test_reuses_a_login_that_finished_while_waiting_for_the_lock(self):
+        @contextlib.contextmanager
+        def other_run_logs_in_first(cache_path):
+            self.write_cache(datetime.now(timezone.utc) + timedelta(hours=1))
+            yield
+
+        with mock.patch.object(aws_assume_role, 'credential_cache_lock', other_run_logs_in_first):
+            patched, stdout, _ = self.run_credential_process(_options(), lambda options: _sts_response())
+
+        patched.assert_not_called()
+        self.assertEqual(json.loads(stdout)['AccessKeyId'], 'ASIACACHED')
+
+    @unittest.skipIf(aws_assume_role.fcntl is None, "no flock on Windows")
+    def test_cache_lock_makes_a_concurrent_run_wait(self):
+        cache_path = aws_assume_role.get_credential_cache_path(_options())
+        acquired = threading.Event()
+
+        def concurrent_run():
+            with aws_assume_role.credential_cache_lock(cache_path):
+                acquired.set()
+
+        with aws_assume_role.credential_cache_lock(cache_path):
+            thread = threading.Thread(target=concurrent_run)
+            thread.start()
+            self.assertFalse(acquired.wait(0.2))
+        thread.join(5)
+
+        self.assertTrue(acquired.is_set())
 
     def test_cache_is_per_duration(self):
         self.run_credential_process(_options(duration=43200), lambda options: _sts_response(timedelta(hours=12)))

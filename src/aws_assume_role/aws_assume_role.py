@@ -20,6 +20,11 @@ from datetime import datetime, timedelta, timezone
 from lxml import etree as ET
 
 try:
+    import fcntl
+except ImportError:  # Windows
+    fcntl = None
+
+try:
     from aws_assume_role.writer import ConfigFileWriter
     from aws_assume_role.accounts import process_account_and_role_choices
     from aws_assume_role.onelogin_client import OneLoginClient
@@ -673,6 +678,27 @@ def write_cached_credentials(cache_path, credentials, refresh_time):
 
 
 @contextlib.contextmanager
+def credential_cache_lock(cache_path):
+    """
+    Holds a lock on the cache entry while logging in, so concurrent runs for the
+    same profile (e.g. several Terraform providers) wait and reuse one login
+    instead of each prompting for MFA. Runs unlocked on Windows, or when the
+    lock file can't be created.
+    """
+    lock_file = None
+    if fcntl is not None:
+        try:
+            os.makedirs(os.path.dirname(cache_path), mode=0o700, exist_ok=True)
+            lock_file = open(cache_path + '.lock', 'a')
+        except OSError:
+            pass
+    with lock_file or contextlib.nullcontext():
+        if lock_file:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+        yield
+
+
+@contextlib.contextmanager
 def prompts_on_terminal():
     """
     Sends prompts and messages to the user's terminal while running as a
@@ -704,26 +730,33 @@ def credential_process(options):
     cache_path = get_credential_cache_path(options)
     output = read_cached_credentials(cache_path)
     if output is None:
-        with prompts_on_terminal():
-            try:
-                aws_session_token = assume_role(options)
-            except SystemExit as e:
-                # Prompts give up with a bare sys.exit(); the AWS CLI must see that as a failure
-                if not e.code:
-                    sys.exit(1)
-                raise
-        credentials = aws_session_token['Credentials']
-        expiration = credentials['Expiration'].astimezone(timezone.utc)
-        output = {
-            'Version': 1,
-            'AccessKeyId': credentials['AccessKeyId'],
-            'SecretAccessKey': credentials['SecretAccessKey'],
-            'SessionToken': credentials['SessionToken'],
-            'Expiration': expiration.strftime(CREDENTIAL_TIME_FORMAT),
-            'AccountId': aws_session_token['AssumedRoleUser']['Arn'].split(':')[4],
-        }
-        write_cached_credentials(cache_path, output, get_refresh_time(expiration))
+        with credential_cache_lock(cache_path):
+            # Another run may have logged in while this one waited for the lock
+            output = read_cached_credentials(cache_path) or log_in_for_credential_process(options, cache_path)
     print(json.dumps(output, indent=2))
+
+
+def log_in_for_credential_process(options, cache_path):
+    with prompts_on_terminal():
+        try:
+            aws_session_token = assume_role(options)
+        except SystemExit as e:
+            # Prompts give up with a bare sys.exit(); the AWS CLI must see that as a failure
+            if not e.code:
+                sys.exit(1)
+            raise
+    credentials = aws_session_token['Credentials']
+    expiration = credentials['Expiration'].astimezone(timezone.utc)
+    output = {
+        'Version': 1,
+        'AccessKeyId': credentials['AccessKeyId'],
+        'SecretAccessKey': credentials['SecretAccessKey'],
+        'SessionToken': credentials['SessionToken'],
+        'Expiration': expiration.strftime(CREDENTIAL_TIME_FORMAT),
+        'AccountId': aws_session_token['AssumedRoleUser']['Arn'].split(':')[4],
+    }
+    write_cached_credentials(cache_path, output, get_refresh_time(expiration))
+    return output
 
 
 def main():
