@@ -4,17 +4,25 @@ import argparse
 import base64
 import boto3
 import botocore.client
+import contextlib
 import getpass
+import hashlib
 import json
 import os
 import sys
+import tempfile
 import time
 import keyring
 
 from base64 import b64decode
 from botocore.exceptions import ClientError
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from lxml import etree as ET
+
+try:
+    import fcntl
+except ImportError:  # Windows
+    fcntl = None
 
 try:
     from aws_assume_role.writer import ConfigFileWriter
@@ -31,6 +39,17 @@ TIME_SLEEP_ON_RESPONSE_PENDING = 15
 MAX_ITER_GET_SAML_RESPONSE = 6
 DEFAULT_AWS_DIR = os.path.expanduser('~/.aws')
 SAML_CACHE_PATH = os.path.join(DEFAULT_AWS_DIR, 'saml_cache.txt')
+CREDENTIAL_CACHE_DIR = os.path.join(DEFAULT_AWS_DIR, 'onelogin', 'cache')
+CREDENTIAL_TIME_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
+# botocore re-runs a credential_process on every API call once its credentials are
+# within 15 minutes of expiry (advisory refresh), and blocks on it within 10
+# minutes (mandatory refresh).
+ADVISORY_REFRESH_WINDOW = timedelta(minutes=15)
+MANDATORY_REFRESH_WINDOW = timedelta(minutes=10)
+TERMINAL_OUTPUT = 'CONOUT$' if os.name == 'nt' else '/dev/tty'
+# Windows getpass only hides the password while sys.stdin is the original one, and
+# reads the console directly anyway, so stdin is left alone there.
+TERMINAL_INPUT = None if os.name == 'nt' else '/dev/tty'
 
 
 def get_options():
@@ -122,7 +141,15 @@ def get_options():
     parser.add_argument("--keychain-account",
                         dest="keychain_account",
                         help="Account name in the OSX Keychain entry.")
+    parser.add_argument("--credential-process",
+                        dest="credential_process",
+                        default=False,
+                        action="store_true",
+                        help="Print the credentials as JSON for the AWS credential_process setting, reusing them until they are about to expire")
     options = parser.parse_args()
+
+    if options.credential_process and (options.file or options.loop != 1 or options.interactive):
+        parser.error("--credential-process can't be combined with --file, --loop or --interactive")
 
     # Track which options were provided via command line
     # These should not be overridden by config file values
@@ -271,7 +298,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                 if client.error_description == "Invalid subdomain":
                     print(error_msg)
                     print("\nOnelogin Instance Sub Domain: ")
-                    onelogin_subdomain = sys.stdin.readline().strip()
+                    onelogin_subdomain = read_line()
                 elif client.error_description in ["Authentication Failed: Invalid user credentials",
                                                   "password is empty"]:
                     print(error_msg)
@@ -279,7 +306,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                 elif client.error_description == "username is empty":
                     print(error_msg)
                     print("OneLogin Username: ")
-                    username_or_email = sys.stdin.readline().strip()
+                    username_or_email = read_line()
                 else:
                     # An unrecognized 400/401 here is typically a wrong AWS app
                     # id (or an app the user isn't entitled to). Fail fast rather
@@ -382,13 +409,13 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                     else:
                         # Otherwise, let's request OTP token to be inserted manually
                         print("Enter the OTP Token for %s: " % device_type)
-                        otp_token = sys.stdin.readline().strip()
+                        otp_token = read_line()
             elif 'otp_token' not in mfa_verify_info:
                 if cmd_otp:
                     otp_token = cmd_otp
                 else:
                     print("Enter the OTP Token for %s: " % mfa_verify_info['device_type'])
-                    otp_token = sys.stdin.readline().strip()
+                    otp_token = read_line()
             else:
                 otp_token = mfa_verify_info['otp_token']
 
@@ -421,7 +448,7 @@ def get_saml_response(client, username_or_email, password, app_id, onelogin_subd
                             else:
                                 print("The OTP Token was not able to be processed, please introduce a new one: ")
 
-                        otp_token = sys.stdin.readline().strip()
+                        otp_token = read_line()
                         saml_endpoint_response = client.get_saml_assertion_verifying(app_id, device_id, state_token, otp_token, do_not_notify=True)
 
                     mfa_error = mfa_error + 1
@@ -465,17 +492,28 @@ def element_text(node):
     return node.text
 
 
+def read_line():
+    """
+    Reads the answer to a prompt. Exits once input runs out, since the callers
+    re-prompt until they get a valid answer and would otherwise loop forever.
+    """
+    line = sys.stdin.readline()
+    if not line:
+        sys.exit("\nNo input to answer the prompt above: stdin reached end of file.")
+    return line.strip()
+
+
 def get_yes_or_not():
     answer = None
     while (answer != 'y' and answer != 'n'):
-        answer = sys.stdin.readline().strip().lower()
+        answer = read_line().lower()
     return answer
 
 
 def get_selection(max):
     answer = None
     while (answer is None or type(answer) != int or answer not in range(0, max)):
-        answer = sys.stdin.readline().strip()
+        answer = read_line()
         try:
             answer = int(answer)
         except:
@@ -486,7 +524,7 @@ def get_selection(max):
 def get_duration():
     answer = None
     while (answer is None or type(answer) != int or answer not in range(900, 43200)):
-        answer = sys.stdin.readline().strip()
+        answer = read_line()
         try:
             answer = int(answer)
         except:
@@ -581,10 +619,161 @@ def append_iterations(iterations):
     return iterations
 
 
-def main():
-    print("\nOneLogin AWS Assume Role Tool\n")
+def get_credential_cache_path(options):
+    """
+    Returns the cache file for the role these options select, so changing the
+    role, profile or duration in the config doesn't keep serving the old credentials.
+    """
+    key = json.dumps([options.subdomain, options.username, options.app_id,
+                      options.aws_account_id, options.aws_role_name, options.profile_name, options.duration])
+    return os.path.join(CREDENTIAL_CACHE_DIR, hashlib.sha256(key.encode('utf-8')).hexdigest() + '.json')
 
+
+def get_refresh_time(expiration):
+    """
+    Returns when cached credentials should be replaced: before botocore's advisory
+    refresh window, so a long-running SDK client doesn't run this tool for every
+    request. 15-minute sessions start inside that window, so those are kept until
+    the mandatory window instead of logging in again on every command.
+    """
+    if expiration - datetime.now(timezone.utc) > ADVISORY_REFRESH_WINDOW:
+        return expiration - ADVISORY_REFRESH_WINDOW
+    return expiration - MANDATORY_REFRESH_WINDOW
+
+
+def read_cached_credentials(cache_path):
+    """
+    Returns the cached credential_process output, or None when there is none or
+    it is due to be replaced.
+    """
+    try:
+        with open(cache_path) as f:
+            cached = json.load(f)
+        refresh_time = datetime.strptime(cached['RefreshTime'], CREDENTIAL_TIME_FORMAT).replace(tzinfo=timezone.utc)
+        credentials = cached['Credentials']
+        complete = credentials['Version'] == 1 and all(
+            credentials[key] for key in ('AccessKeyId', 'SecretAccessKey', 'SessionToken', 'Expiration'))
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if not complete or datetime.now(timezone.utc) >= refresh_time:
+        return None
+    return credentials
+
+
+def write_cached_credentials(cache_path, credentials, refresh_time):
+    try:
+        os.makedirs(os.path.dirname(cache_path), mode=0o700, exist_ok=True)
+        # mkstemp creates the file 0600; the rename stops a concurrent run reading it half-written
+        fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(cache_path))
+        try:
+            with os.fdopen(fd, 'w') as f:
+                json.dump({'RefreshTime': refresh_time.strftime(CREDENTIAL_TIME_FORMAT),
+                           'Credentials': credentials}, f)
+            os.replace(tmp_path, cache_path)
+        except OSError:
+            os.remove(tmp_path)
+            raise
+    except OSError as e:
+        print("Unable to cache the AWS credentials: %s" % e, file=sys.stderr)
+
+
+@contextlib.contextmanager
+def credential_cache_lock(cache_path):
+    """
+    Holds a lock on the cache entry while logging in, so concurrent runs for the
+    same profile (e.g. several Terraform providers) wait and reuse one login
+    instead of each prompting for MFA. Runs unlocked on Windows, or when the
+    lock file can't be created.
+    """
+    lock_file = None
+    if fcntl is not None:
+        try:
+            os.makedirs(os.path.dirname(cache_path), mode=0o700, exist_ok=True)
+            lock_file = open(cache_path + '.lock', 'a')
+        except OSError:
+            pass
+    with lock_file or contextlib.nullcontext():
+        if lock_file:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+        yield
+
+
+@contextlib.contextmanager
+def prompts_on_terminal():
+    """
+    Sends prompts and messages to the user's terminal while running as a
+    credential_process: the AWS CLI/SDK parses stdout as the credentials and
+    captures stderr, so neither reaches the user. Falls back to stderr when there
+    is no terminal (e.g. when started by an IDE).
+    """
+    saved_stdin, saved_stdout = sys.stdin, sys.stdout
+    with contextlib.ExitStack() as stack:
+        try:
+            terminal_out = stack.enter_context(open(TERMINAL_OUTPUT, 'w'))
+            terminal_in = stack.enter_context(open(TERMINAL_INPUT)) if TERMINAL_INPUT else saved_stdin
+        except OSError:
+            terminal_in, terminal_out = saved_stdin, sys.stderr
+        sys.stdin, sys.stdout = terminal_in, terminal_out
+        try:
+            yield
+        finally:
+            sys.stdin, sys.stdout = saved_stdin, saved_stdout
+
+
+def credential_process(options):
+    """
+    Prints the credentials in the format the AWS CLI/SDKs expect from a
+    credential_process. They run it for every command, so the credentials are
+    cached until they are about to expire instead of logging in to OneLogin each time.
+    https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html
+    """
+    cache_path = get_credential_cache_path(options)
+    output = read_cached_credentials(cache_path)
+    if output is None:
+        with credential_cache_lock(cache_path):
+            # Another run may have logged in while this one waited for the lock
+            output = read_cached_credentials(cache_path) or log_in_for_credential_process(options, cache_path)
+    print(json.dumps(output, indent=2))
+
+
+def log_in_for_credential_process(options, cache_path):
+    with prompts_on_terminal():
+        try:
+            aws_session_token = assume_role(options)
+        except SystemExit as e:
+            # Prompts give up with a bare sys.exit(); the AWS CLI must see that as a failure
+            if not e.code:
+                sys.exit(1)
+            raise
+    credentials = aws_session_token['Credentials']
+    expiration = credentials['Expiration'].astimezone(timezone.utc)
+    output = {
+        'Version': 1,
+        'AccessKeyId': credentials['AccessKeyId'],
+        'SecretAccessKey': credentials['SecretAccessKey'],
+        'SessionToken': credentials['SessionToken'],
+        'Expiration': expiration.strftime(CREDENTIAL_TIME_FORMAT),
+        'AccountId': aws_session_token['AssumedRoleUser']['Arn'].split(':')[4],
+    }
+    write_cached_credentials(cache_path, output, get_refresh_time(expiration))
+    return output
+
+
+def main():
     options = get_options()
+    if options.credential_process:
+        credential_process(options)
+    else:
+        assume_role(options)
+
+
+def assume_role(options):
+    """
+    Logs in to OneLogin and assumes the selected AWS role, then prints or saves
+    the credentials. With --credential-process it returns the
+    AssumeRoleWithSAML response instead.
+    """
+    print("\nOneLogin AWS Assume Role Tool\n")
 
     client = get_client(options)
 
@@ -663,13 +852,13 @@ def main():
                 answer = get_yes_or_not()
                 if answer == 'y':
                     print("Profile name: ")
-                    profile_name = sys.stdin.readline().strip()
+                    profile_name = read_line()
 
         missing_onelogin_data = username_or_email is None or password is None or app_id is None or onelogin_subdomain is None
 
         if ask_for_user_again:
             print("OneLogin Username: ")
-            username_or_email = sys.stdin.readline().strip()
+            username_or_email = read_line()
 
             password = getpass.getpass("\nOneLogin Password: ")
             ask_for_user_again = False
@@ -681,7 +870,7 @@ def main():
                     username_or_email = options.username
                 else:
                     print("OneLogin Username: ")
-                    username_or_email = sys.stdin.readline().strip()
+                    username_or_email = read_line()
 
             if password is None:
                 if options.password:
@@ -701,13 +890,13 @@ def main():
                     app_id = options.app_id
                 else:
                     print("\nAWS App ID: ")
-                    app_id = sys.stdin.readline().strip()
+                    app_id = read_line()
 
             if options.subdomain:
                 onelogin_subdomain = options.subdomain
             else:
                 print("\nOnelogin Instance Sub Domain: ")
-                onelogin_subdomain = sys.stdin.readline().strip()
+                onelogin_subdomain = read_line()
 
         if result is None:
             result = get_saml_response(client, username_or_email, password, app_id, onelogin_subdomain, ip, mfa_verify_info, cmd_otp)
@@ -803,7 +992,7 @@ def main():
                 aws_region = options.aws_region
             else:
                 print("\nAWS Region (" + default_aws_region + "): ")
-                aws_region = sys.stdin.readline().strip()
+                aws_region = read_line()
             if not aws_region or aws_region == "-":
                 aws_region = default_aws_region
             ask_for_role_again = False
@@ -867,6 +1056,9 @@ def main():
         security_token = aws_session_token['Credentials']['SessionToken']
         session_expiration = aws_session_token['Credentials']['Expiration'].strftime('%Y-%m-%dT%H:%M:%S%z')
         arn = aws_session_token['AssumedRoleUser']['Arn']
+
+        if options.credential_process:
+            return aws_session_token
 
         if options.profile_name is None and options.file is None:
             action = "export"
