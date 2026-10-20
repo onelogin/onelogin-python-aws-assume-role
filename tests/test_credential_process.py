@@ -45,10 +45,12 @@ class CredentialProcessTest(unittest.TestCase):
     def setUp(self):
         self.cache_dir = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.cache_dir)
+        no_terminal = os.path.join(self.cache_dir, 'missing', 'tty')
         patches = [
             mock.patch.object(aws_assume_role, 'CREDENTIAL_CACHE_DIR', self.cache_dir),
             # No terminal: prompts fall back to stderr, as under CI or an IDE
-            mock.patch.object(aws_assume_role, 'TERMINAL_INPUT', os.path.join(self.cache_dir, 'missing')),
+            mock.patch.object(aws_assume_role, 'TERMINAL_INPUT', no_terminal),
+            mock.patch.object(aws_assume_role, 'TERMINAL_OUTPUT', no_terminal),
         ]
         for patch in patches:
             patch.start()
@@ -89,7 +91,7 @@ class CredentialProcessTest(unittest.TestCase):
 
         self.assertEqual(json.loads(stdout)['Expiration'], utc_expiration.strftime('%Y-%m-%dT%H:%M:%SZ'))
 
-    def test_reuses_cached_credentials_until_near_expiry(self):
+    def test_reuses_cached_credentials_until_the_refresh_time(self):
         self.run_credential_process(_options(), lambda options: _sts_response())
 
         patched, stdout, _ = self.run_credential_process(_options(), lambda options: _sts_response())
@@ -97,12 +99,33 @@ class CredentialProcessTest(unittest.TestCase):
         patched.assert_not_called()
         self.assertEqual(json.loads(stdout)['AccessKeyId'], 'ASIAEXAMPLE')
 
-    def test_logs_in_again_when_cached_credentials_are_near_expiry(self):
-        self.run_credential_process(_options(), lambda options: _sts_response(timedelta(minutes=9)))
+    def test_logs_in_again_after_the_refresh_time(self):
+        cache_path = aws_assume_role.get_credential_cache_path(_options())
+        aws_assume_role.write_cached_credentials(cache_path, {'Version': 1}, datetime.now(timezone.utc) - timedelta(seconds=1))
+
+        patched, stdout, _ = self.run_credential_process(_options(), lambda options: _sts_response())
+
+        patched.assert_called_once()
+        self.assertEqual(json.loads(stdout)['AccessKeyId'], 'ASIAEXAMPLE')
+
+    def test_fifteen_minute_sessions_are_reused(self):
+        # STS's shortest session starts inside botocore's 15-minute advisory window,
+        # which re-runs the process straight away; that must not log in again
+        self.run_credential_process(_options(), lambda options: _sts_response(timedelta(minutes=15)))
 
         patched, _, _ = self.run_credential_process(_options(), lambda options: _sts_response())
 
-        patched.assert_called_once()
+        patched.assert_not_called()
+
+    def test_refresh_time_is_before_the_advisory_refresh_window(self):
+        expiration = datetime.now(timezone.utc) + timedelta(hours=1)
+
+        self.assertEqual(aws_assume_role.get_refresh_time(expiration), expiration - timedelta(minutes=15))
+
+    def test_refresh_time_for_sessions_inside_the_advisory_window_is_the_mandatory_window(self):
+        expiration = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+        self.assertEqual(aws_assume_role.get_refresh_time(expiration), expiration - timedelta(minutes=10))
 
     def test_cache_is_per_role(self):
         self.run_credential_process(_options(), lambda options: _sts_response())
@@ -142,6 +165,33 @@ class CredentialProcessTest(unittest.TestCase):
         self.run_credential_process(_options(), lambda options: _sts_response())
 
         self.assertIs(sys.stdin, stdin)
+
+    def test_keeps_stdin_without_a_terminal_input(self):
+        # Windows: getpass only hides the password while sys.stdin is the original
+        console = os.path.join(self.cache_dir, 'console')
+        stdin = sys.stdin
+        with mock.patch.object(aws_assume_role, 'TERMINAL_INPUT', None), \
+                mock.patch.object(aws_assume_role, 'TERMINAL_OUTPUT', console), \
+                aws_assume_role.prompts_on_terminal():
+            self.assertIs(sys.stdin, stdin)
+            print("OneLogin Password: ")
+
+        with open(console) as f:
+            self.assertEqual(f.read(), "OneLogin Password: \n")
+
+
+class ReadLineTest(unittest.TestCase):
+    def test_returns_the_stripped_answer(self):
+        with mock.patch.object(sys, 'stdin', io.StringIO("  dev \n")):
+            self.assertEqual(aws_assume_role.read_line(), "dev")
+
+    def test_exits_when_input_runs_out(self):
+        # get_selection used to re-read '' forever at end of file
+        with mock.patch.object(sys, 'stdin', io.StringIO("not a number\n")), \
+                self.assertRaises(SystemExit) as raised:
+            aws_assume_role.get_selection(2)
+
+        self.assertIn("end of file", raised.exception.code)
 
 
 class CredentialProcessOptionsTest(unittest.TestCase):

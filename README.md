@@ -320,7 +320,7 @@ Then use it like any other profile:
 > aws s3 ls --profile dev
 ```
 
-With `--credential-process` the tool prints the credentials as the JSON the AWS CLI/SDKs expect, and does not write any file. The credentials are cached in `~/.aws/onelogin/cache` and reused until they are within 10 minutes of expiring, so you only log in to OneLogin (and complete MFA) when they need renewing. Delete that directory to force a new login.
+With `--credential-process` the tool prints the credentials as the JSON the AWS CLI/SDKs expect, and does not write any file. The credentials are cached in `~/.aws/onelogin/cache` and reused until 15 minutes before they expire (10 minutes for 15-minute sessions), so you only log in to OneLogin (and complete MFA) when they need renewing. Delete that directory to force a new login.
 
 Any prompts (password, MFA, role selection, ...) are shown on your terminal. To avoid them, put the username, app id, subdomain and the AWS account/role for each profile in `onelogin.aws.json` (see the `profiles` setting above) and use the keychain options for the password. Each `--profile`, account and role gets its own cache entry. If the tool is started without a terminal, for example by an IDE, the prompts go to stderr instead, which the AWS CLI and most SDKs don't show, so everything except MFA needs to be configured.
 
