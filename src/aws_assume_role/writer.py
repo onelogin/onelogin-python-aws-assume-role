@@ -74,7 +74,8 @@ class ConfigFileWriter(object):
     def _create_file(self, config_filename):
         # Create the file as well as the parent dir if needed.
         dirname = os.path.split(config_filename)[0]
-        if not os.path.isdir(dirname):
+        # A bare filename (e.g. --file creds) has no parent dir to create
+        if dirname and not os.path.isdir(dirname):
             os.makedirs(dirname)
         with os.fdopen(os.open(config_filename,
                                os.O_WRONLY | os.O_CREAT, 0o600), 'w'):
