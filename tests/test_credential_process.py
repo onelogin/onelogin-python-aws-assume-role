@@ -20,7 +20,7 @@ from unittest import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from aws_assume_role import aws_assume_role  # noqa: E402
+from aws_assume_role import aws_assume_role, credential_process, options, prompts  # noqa: E402
 
 
 def _options(**overrides):
@@ -49,10 +49,10 @@ class CredentialProcessTest(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.cache_dir)
         no_terminal = os.path.join(self.cache_dir, 'missing', 'tty')
         patches = [
-            mock.patch.object(aws_assume_role, 'CREDENTIAL_CACHE_DIR', self.cache_dir),
+            mock.patch.object(credential_process, 'CREDENTIAL_CACHE_DIR', self.cache_dir),
             # No terminal: prompts fall back to stderr, as under CI or an IDE
-            mock.patch.object(aws_assume_role, 'TERMINAL_INPUT', no_terminal),
-            mock.patch.object(aws_assume_role, 'TERMINAL_OUTPUT', no_terminal),
+            mock.patch.object(credential_process, 'TERMINAL_INPUT', no_terminal),
+            mock.patch.object(credential_process, 'TERMINAL_OUTPUT', no_terminal),
         ]
         for patch in patches:
             patch.start()
@@ -60,10 +60,10 @@ class CredentialProcessTest(unittest.TestCase):
 
     def run_credential_process(self, options, assume_role):
         stdout, stderr = io.StringIO(), io.StringIO()
-        with mock.patch.object(aws_assume_role, 'assume_role', side_effect=assume_role) as patched, \
-                redirect_stdout(stdout), redirect_stderr(stderr):
-            aws_assume_role.credential_process(options)
-        return patched, stdout.getvalue(), stderr.getvalue()
+        assume_role = mock.Mock(side_effect=assume_role)
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            credential_process.credential_process(options, assume_role)
+        return assume_role, stdout.getvalue(), stderr.getvalue()
 
     def test_prints_only_the_credential_process_json_on_stdout(self):
         response = _sts_response()
@@ -105,8 +105,8 @@ class CredentialProcessTest(unittest.TestCase):
         credentials = {'Version': 1, 'AccessKeyId': 'ASIACACHED', 'SecretAccessKey': 'secret',
                        'SessionToken': 'token', 'Expiration': '2099-01-01T00:00:00Z'}
         credentials.update(overrides)
-        cache_path = aws_assume_role.get_credential_cache_path(_options())
-        aws_assume_role.write_cached_credentials(cache_path, credentials, refresh_time)
+        cache_path = credential_process.get_credential_cache_path(_options())
+        credential_process.write_cached_credentials(cache_path, credentials, refresh_time)
 
     def test_logs_in_again_after_the_refresh_time(self):
         self.write_cache(datetime.now(timezone.utc) - timedelta(seconds=1))
@@ -138,12 +138,12 @@ class CredentialProcessTest(unittest.TestCase):
     def test_refresh_time_is_before_the_advisory_refresh_window(self):
         expiration = datetime.now(timezone.utc) + timedelta(hours=1)
 
-        self.assertEqual(aws_assume_role.get_refresh_time(expiration), expiration - timedelta(minutes=15))
+        self.assertEqual(credential_process.get_refresh_time(expiration), expiration - timedelta(minutes=15))
 
     def test_refresh_time_for_sessions_inside_the_advisory_window_is_the_mandatory_window(self):
         expiration = datetime.now(timezone.utc) + timedelta(minutes=15)
 
-        self.assertEqual(aws_assume_role.get_refresh_time(expiration), expiration - timedelta(minutes=10))
+        self.assertEqual(credential_process.get_refresh_time(expiration), expiration - timedelta(minutes=10))
 
     def test_cache_is_per_role(self):
         self.run_credential_process(_options(), lambda options: _sts_response())
@@ -158,22 +158,22 @@ class CredentialProcessTest(unittest.TestCase):
             self.write_cache(datetime.now(timezone.utc) + timedelta(hours=1))
             yield
 
-        with mock.patch.object(aws_assume_role, 'credential_cache_lock', other_run_logs_in_first):
+        with mock.patch.object(credential_process, 'credential_cache_lock', other_run_logs_in_first):
             patched, stdout, _ = self.run_credential_process(_options(), lambda options: _sts_response())
 
         patched.assert_not_called()
         self.assertEqual(json.loads(stdout)['AccessKeyId'], 'ASIACACHED')
 
-    @unittest.skipIf(aws_assume_role.fcntl is None, "no flock on Windows")
+    @unittest.skipIf(credential_process.fcntl is None, "no flock on Windows")
     def test_cache_lock_makes_a_concurrent_run_wait(self):
-        cache_path = aws_assume_role.get_credential_cache_path(_options())
+        cache_path = credential_process.get_credential_cache_path(_options())
         acquired = threading.Event()
 
         def concurrent_run():
-            with aws_assume_role.credential_cache_lock(cache_path):
+            with credential_process.credential_cache_lock(cache_path):
                 acquired.set()
 
-        with aws_assume_role.credential_cache_lock(cache_path):
+        with credential_process.credential_cache_lock(cache_path):
             thread = threading.Thread(target=concurrent_run)
             thread.start()
             self.assertFalse(acquired.wait(0.2))
@@ -189,7 +189,7 @@ class CredentialProcessTest(unittest.TestCase):
         patched.assert_called_once()
 
     def test_ignores_a_corrupt_cache_file(self):
-        cache_path = aws_assume_role.get_credential_cache_path(_options())
+        cache_path = credential_process.get_credential_cache_path(_options())
         with open(cache_path, 'w') as f:
             f.write('not json')
 
@@ -202,7 +202,7 @@ class CredentialProcessTest(unittest.TestCase):
     def test_cache_file_is_private(self):
         self.run_credential_process(_options(), lambda options: _sts_response())
 
-        cache_path = aws_assume_role.get_credential_cache_path(_options())
+        cache_path = credential_process.get_credential_cache_path(_options())
         self.assertEqual(stat.S_IMODE(os.stat(cache_path).st_mode), 0o600)
 
     def test_bare_exit_from_a_prompt_is_a_failure(self):
@@ -224,9 +224,9 @@ class CredentialProcessTest(unittest.TestCase):
         # Windows: getpass only hides the password while sys.stdin is the original
         console = os.path.join(self.cache_dir, 'console')
         stdin = sys.stdin
-        with mock.patch.object(aws_assume_role, 'TERMINAL_INPUT', None), \
-                mock.patch.object(aws_assume_role, 'TERMINAL_OUTPUT', console), \
-                aws_assume_role.prompts_on_terminal():
+        with mock.patch.object(credential_process, 'TERMINAL_INPUT', None), \
+                mock.patch.object(credential_process, 'TERMINAL_OUTPUT', console), \
+                credential_process.prompts_on_terminal():
             self.assertIs(sys.stdin, stdin)
             print("OneLogin Password: ")
 
@@ -237,13 +237,13 @@ class CredentialProcessTest(unittest.TestCase):
 class ReadLineTest(unittest.TestCase):
     def test_returns_the_stripped_answer(self):
         with mock.patch.object(sys, 'stdin', io.StringIO("  dev \n")):
-            self.assertEqual(aws_assume_role.read_line(), "dev")
+            self.assertEqual(prompts.read_line(), "dev")
 
     def test_exits_when_input_runs_out(self):
         # get_selection used to re-read '' forever at end of file
         with mock.patch.object(sys, 'stdin', io.StringIO("not a number\n")), \
                 self.assertRaises(SystemExit) as raised:
-            aws_assume_role.get_selection(2)
+            prompts.get_selection(2)
 
         self.assertIn("end of file", raised.exception.code)
 
@@ -251,8 +251,8 @@ class ReadLineTest(unittest.TestCase):
 class CredentialProcessOptionsTest(unittest.TestCase):
     def get_options(self, *args):
         with mock.patch.object(sys, 'argv', ['onelogin-aws-assume-role'] + list(args)), \
-                mock.patch.object(aws_assume_role, 'get_config', return_value=None):
-            return aws_assume_role.get_options()
+                mock.patch.object(options, 'get_config', return_value=None):
+            return options.get_options()
 
     def test_credential_process_flag(self):
         self.assertTrue(self.get_options('--credential-process').credential_process)
@@ -262,6 +262,16 @@ class CredentialProcessOptionsTest(unittest.TestCase):
         for args in (['--loop', '2'], ['--interactive'], ['--file', 'creds']):
             with self.subTest(args=args), redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
                 self.get_options('--credential-process', *args)
+
+
+class MainTest(unittest.TestCase):
+    def test_credential_process_logs_in_with_assume_role(self):
+        selected = _options()
+        with mock.patch.object(aws_assume_role, 'get_options', return_value=selected), \
+                mock.patch.object(aws_assume_role, 'credential_process') as patched:
+            aws_assume_role.main()
+
+        patched.assert_called_once_with(selected, aws_assume_role.assume_role)
 
 
 if __name__ == '__main__':
