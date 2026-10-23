@@ -10,6 +10,7 @@ must pull in or the console script crashes on startup).
 
 import sys
 import os
+import subprocess
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -22,6 +23,15 @@ class CliImportTest(unittest.TestCase):
         # dependency is missing, this raises ModuleNotFoundError.
         from aws_assume_role import aws_assume_role
         self.assertTrue(callable(aws_assume_role.main))
+
+    def test_script_runs_from_a_source_checkout(self):
+        # Run by path, the modules fall back to importing each other without
+        # the aws_assume_role package prefix
+        script = os.path.join(os.path.dirname(__file__), '..', 'src', 'aws_assume_role', 'aws_assume_role.py')
+        result = subprocess.run([sys.executable, script, '--help'], capture_output=True, text=True)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('--credential-process', result.stdout)
 
 
 if __name__ == '__main__':
