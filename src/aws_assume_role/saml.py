@@ -15,12 +15,21 @@ DEFAULT_AWS_DIR = os.path.expanduser('~/.aws')
 SAML_CACHE_PATH = os.path.join(DEFAULT_AWS_DIR, 'saml_cache.txt')
 
 
+def parse_xml(xml):
+    """
+    Parses a SAMLResponse without expanding entities or fetching anything over
+    the network. Before 5.0, lxml resolves external entities by default, which
+    lets a crafted document read local files (XXE).
+    """
+    return ET.fromstring(xml, ET.XMLParser(resolve_entities=False, no_network=True))
+
+
 def get_attributes(saml_response):
     if not saml_response:
         return {}
 
     saml_response_xml = base64.b64decode(saml_response)
-    saml_response_elem = ET.fromstring(saml_response_xml)
+    saml_response_elem = parse_xml(saml_response_xml)
     NSMAP = {
         'samlp': 'urn:oasis:names:tc:SAML:2.0:protocol',
         'saml': 'urn:oasis:names:tc:SAML:2.0:assertion'
@@ -97,7 +106,7 @@ def is_valid_saml_assertion(saml_xml):
         return False
 
     try:
-        doc = ET.fromstring(saml_xml)
+        doc = parse_xml(saml_xml)
         conditions = list(doc.iter(tag='{urn:oasis:names:tc:SAML:2.0:assertion}Conditions'))
         if conditions:
             not_before_str = conditions[0].get('NotBefore')
